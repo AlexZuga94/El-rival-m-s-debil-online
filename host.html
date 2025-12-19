@@ -3,370 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MASTER CONTROL - RIVAL MÁS DÉBIL</title>
+    <title>HOST - RIVAL MÁS DÉBIL</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
-    
     <style>
-        :root {
-            --bg-dark: #050505;
-            --primary: #00d2ff;     /* Cian neón */
-            --accent: #f1c40f;      /* Dorado dinero */
-            --danger: #ff0055;      /* Rojo eliminación */
-            --success: #00ff9d;     /* Verde acierto */
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #ffffff;
-            --text-dim: #888888;
-        }
-
-        * { box-sizing: border-box; }
-
-        body {
-            margin: 0; padding: 20px;
-            background-color: var(--bg-dark);
-            background-image: 
-                radial-gradient(circle at 15% 50%, rgba(0, 210, 255, 0.08), transparent 25%),
-                radial-gradient(circle at 85% 30%, rgba(241, 196, 15, 0.05), transparent 25%);
-            color: var(--text-main);
-            font-family: 'Outfit', sans-serif;
-            height: 100vh;
-            overflow: hidden; /* Dashboard fijo */
-            display: grid;
-            grid-template-rows: auto 1fr;
-            gap: 20px;
-        }
-
-        /* --- UTILIDADES --- */
-        .hidden { display: none !important; }
+        :root { --bg: #050505; --primary: #00d2ff; --accent: #f1c40f; --danger: #ff0055; --success: #00ff9d; --glass: rgba(255,255,255,0.08); }
+        body { margin:0; padding:10px; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:grid; grid-template-rows: auto 1fr; gap:10px; overflow:hidden; }
         
-        .glass-panel {
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
+        header { display:flex; justify-content:space-between; align-items:center; background:var(--glass); padding:10px 20px; border-radius:12px; }
+        .brand { font-weight:900; font-size:1.2rem; color:var(--primary); text-transform:uppercase; letter-spacing:1px; }
+        .timer-box { font-size:2.5rem; font-weight:700; color:var(--primary); }
+        .bank-box { text-align:right; } .bank-val { font-size:1.8rem; color:var(--accent); font-weight:bold; }
 
-        h1, h2, h3 { margin: 0; text-transform: uppercase; letter-spacing: 1px; }
-
-        /* --- HEADER (TOP BAR) --- */
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            height: 80px;
-        }
-
-        .brand-title {
-            font-weight: 900; font-size: 1.5rem;
-            background: linear-gradient(to right, #fff, var(--primary));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-
-        .timer-box {
-            font-size: 3rem; font-weight: 700; font-variant-numeric: tabular-nums;
-            text-align: center; color: var(--primary);
-            text-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
-        }
-
-        .bank-display {
-            text-align: right;
-        }
-        .bank-label { font-size: 0.8rem; color: var(--text-dim); display: block; }
-        .bank-value { font-size: 2rem; color: var(--accent); font-weight: bold; }
-
-        /* --- MAIN DASHBOARD LAYOUT --- */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 300px 1fr 300px;
-            gap: 20px;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        /* COLUMNA IZQUIERDA: ESTADO JUEGO */
-        .col-left { display: flex; flex-direction: column; gap: 15px; }
-
-        .control-btn {
-            background: var(--glass); color: white; border: 1px solid var(--glass-border);
-            padding: 15px; width: 100%; text-align: left; cursor: pointer;
-            font-family: 'Outfit'; font-weight: 600; text-transform: uppercase;
-            transition: 0.2s; border-radius: 8px; margin-bottom: 5px;
-        }
-        .control-btn:hover { background: rgba(255,255,255,0.1); border-color: var(--primary); }
-        .control-btn.active { background: var(--primary); color: black; border-color: var(--primary); }
+        .main-grid { display:grid; grid-template-columns: 250px 1fr 250px; gap:10px; height:100%; overflow:hidden; }
+        .panel { background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; display:flex; flex-direction:column; gap:10px; }
         
-        .btn-danger { color: var(--danger); border-color: rgba(255, 0, 85, 0.3); }
-        .btn-danger:hover { background: var(--danger); color: white; }
+        .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); transition:0.2s; text-align:left; }
+        .btn:hover { background:rgba(255,255,255,0.2); }
+        .btn.active { background:var(--primary); color:black; }
+        .btn-danger { color:var(--danger); border:1px solid var(--danger); }
+        .btn-danger:hover { background:var(--danger); color:white; }
 
-        /* COLUMNA CENTRAL: PREGUNTA Y CONTROLES */
-        .col-center { display: flex; flex-direction: column; gap: 20px; }
-
-        #questionCard {
-            flex: 1;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center; border-left: 5px solid var(--primary);
-        }
+        /* Centro */
+        .center-panel { justify-content: space-between; }
+        .question-area { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px; border-left:4px solid var(--primary); background:rgba(0,0,0,0.3); border-radius:8px; margin-bottom:10px; overflow-y:auto; }
+        .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; }
+        .a-text { font-size:1.4rem; color:var(--success); margin-top:15px; background:rgba(0,255,157,0.1); padding:5px 15px; border-radius:20px; }
         
-        .q-text { font-size: 2.2rem; font-weight: 700; line-height: 1.2; margin-bottom: 30px; }
-        .a-text { 
-            font-size: 1.8rem; color: var(--success); font-weight: 500; 
-            padding: 10px 30px; border-radius: 50px; background: rgba(0, 255, 157, 0.1);
-            border: 1px solid rgba(0, 255, 157, 0.2);
-        }
+        .controls-area { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:80px; }
+        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.2rem; cursor:pointer; text-transform:uppercase; }
+        .b-wrong { background:var(--danger); color:white; }
+        .b-bank { background:var(--accent); color:black; }
+        .b-correct { background:var(--success); color:black; }
 
-        .action-buttons {
-            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; height: 100px;
-        }
+        select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; margin-bottom:5px; }
         
-        .big-btn {
-            border: none; border-radius: 12px; font-size: 1.2rem; font-weight: 800;
-            cursor: pointer; text-transform: uppercase; transition: transform 0.1s;
-        }
-        .big-btn:active { transform: scale(0.95); }
-
-        .btn-ok { background: var(--success); color: #00331f; box-shadow: 0 0 15px rgba(0,255,157,0.2); }
-        .btn-bad { background: var(--danger); color: white; box-shadow: 0 0 15px rgba(255,0,85,0.2); }
-        .btn-bank { background: var(--accent); color: black; box-shadow: 0 0 15px rgba(241,196,15,0.2); }
-
-        /* COLUMNA DERECHA: RANKING Y JUGADORES */
-        .col-right { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-
-        .ranking-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        .ranking-table th { text-align: left; color: var(--text-dim); padding: 5px; border-bottom: 1px solid #333; }
-        .ranking-table td { padding: 8px 5px; border-bottom: 1px solid #222; }
-        .ranking-score { color: var(--success); font-weight: bold; }
-        .ranking-fail { color: var(--danger); font-weight: bold; }
-
-        /* FINAL DASHBOARD */
-        #finalDashboard {
-            display: none; /* Se activa con JS */
-            grid-column: span 3;
-            background: rgba(0,0,0,0.8);
-            border-radius: 16px;
-            padding: 20px; text-align: center;
-        }
-        
-        .final-vs {
-            display: flex; justify-content: space-around; align-items: center; margin-top: 20px;
-        }
-        .final-p-card { font-size: 1.5rem; font-weight: bold; }
-        .final-score-big { font-size: 3rem; color: var(--primary); }
-        .sudden-death-alert {
-            color: var(--danger); font-size: 2rem; font-weight: 900; animation: pulse 1s infinite;
-        }
-
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-
+        /* Stats small */
+        .stat-row { display:flex; justify-content:space-between; font-size:0.9rem; border-bottom:1px solid #333; padding:5px 0; }
     </style>
 </head>
 <body>
-
-    <header class="glass-panel">
-        <div class="brand-title">CONTROL DE MANDO</div>
-        
-        <div id="timer" class="timer-box">00</div>
-        
-        <div class="bank-display">
-            <span class="bank-label">BANCO TOTAL</span>
-            <span id="bankedDisplay" class="bank-value">$0</span>
-        </div>
+    <header>
+        <div class="brand">EL RIVAL MÁS DÉBIL<br><span style="font-size:0.8rem; color:#888;">HOST CONTROL</span></div>
+        <div class="timer-box">⏱ <span id="timerDisplay">20</span></div>
+        <div class="bank-box"><div style="font-size:0.7rem; color:#888;">BANCO</div><div id="bankDisplay" class="bank-val">$0</div></div>
     </header>
 
-    <div class="dashboard-grid">
-        
-        <aside class="col-left glass-panel">
-            <h3 style="color: var(--text-dim); margin-bottom:10px;">Fases del Juego</h3>
-            <button class="control-btn" onclick="setPhase('waiting')">⏸️ Espera / Intro</button>
-            <button class="control-btn active" onclick="setPhase('questions')">▶️ Rondas de Preguntas</button>
-            <button class="control-btn" onclick="setPhase('voting')">🗳️ Votación</button>
-            <button class="control-btn btn-danger" onclick="setPhase('elimination')">☠️ Eliminación</button>
+    <div class="main-grid">
+        <div class="panel">
+            <small style="color:#888">FASES</small>
+            <button class="btn" onclick="setPhase('waiting')">⏸ INTRO / ESPERA</button>
+            <button class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
+            <button class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
+            <button class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
             
-            <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
+            <div style="margin-top:auto">
+                <small style="color:#888">RONDA</small>
+                <div id="roundDisplay" style="font-size:1.5rem; font-weight:bold">1</div>
+                <small style="color:#888">TURNO ACTUAL</small>
+                <div id="turnDisplay" style="font-size:1.3rem; color:var(--primary); font-weight:bold;">--</div>
+            </div>
+            <button class="btn" onclick="socket.emit('resetGame')" style="margin-top:10px; background:#333;">🔄 RESET GAME</button>
+        </div>
+
+        <div class="panel center-panel">
+            <div class="question-area">
+                <div id="questionText" class="q-text">Esperando inicio...</div>
+                <div id="answerText" class="a-text">Respuesta</div>
+            </div>
+            <div class="controls-area">
+                <button class="big-btn b-wrong" onclick="socket.emit('wrongAnswer')">✖ MAL</button>
+                <button class="big-btn b-bank" onclick="socket.emit('bank')">💰 BANCA</button>
+                <button class="big-btn b-correct" onclick="socket.emit('correctAnswer')">✔ BIEN</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <small style="color:#888">ELIMINAR JUGADOR</small>
+            <select id="eliminationSelect"><option value="">Selecciona...</option></select>
+            <button class="btn btn-danger" style="text-align:center" onclick="eliminate()">ELIMINAR SELECCIONADO</button>
             
-            <button class="control-btn" onclick="resetGame()">🔄 RESET TOTAL</button>
-
-            <div style="margin-top:auto;">
-                <small style="color:var(--text-dim)">Ronda Actual</small>
-                <div id="roundDisplay" style="font-size:1.5rem; font-weight:bold;">1</div>
-                <small style="color:var(--text-dim)">Turno de:</small>
-                <div id="turnDisplay" style="font-size:1.2rem; color:var(--primary);">--</div>
-            </div>
-        </aside>
-
-        <main class="col-center">
-            
-            <div id="questionCard" class="glass-panel">
-                <span id="questionText" class="q-text">Esperando inicio...</span>
-                <span id="answerText" class="a-text">Respuesta</span>
-            </div>
-
-            <div class="action-buttons">
-                <button class="big-btn btn-bad" onclick="sendWrong()">✖ INCORRECTO</button>
-                <button class="big-btn btn-bank" onclick="forceBank()">💰 BANCA</button>
-                <button class="big-btn btn-ok" onclick="sendCorrect()">✔ CORRECTO</button>
-            </div>
-
-            <div id="finalDashboard" class="glass-panel">
-                <h2 style="color:var(--accent)">🏆 GRAN FINAL 🏆</h2>
-                <div id="suddenDeathMsg" class="sudden-death-alert hidden">¡MUERTE SÚBITA!</div>
-                
-                <div class="final-vs">
-                    <div class="final-p-card">
-                        <div id="fp1Name">JUGADOR 1</div>
-                        <div id="fp1Score" class="final-score-big">0</div>
-                    </div>
-                    <div style="font-size:2rem; color:#555;">VS</div>
-                    <div class="final-p-card">
-                        <div id="fp2Name">JUGADOR 2</div>
-                        <div id="fp2Score" class="final-score-big">0</div>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-
-        <aside class="col-right glass-panel">
-            <h3 style="color: var(--text-dim);">Estadísticas</h3>
-            <div id="ranking">
-                <p style="color:#555; text-align:center; margin-top:20px;">Esperando datos...</p>
-            </div>
-
-            <hr style="border:0; border-top:1px solid #333;">
-
-            <h3 style="color: var(--text-dim);">Votación</h3>
-            <div id="voteResults" class="glass-panel" style="background:rgba(0,0,0,0.3); padding:10px;">
-                </div>
-            
-            <h3 style="color: var(--text-dim); margin-top:10px;">Eliminar Jugador</h3>
-            <input type="text" id="eliminationTarget" placeholder="Nombre a eliminar" 
-                   style="width:100%; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:5px;">
-            <button onclick="eliminatePlayer()" 
-                    style="width:100%; margin-top:5px; background:var(--danger); color:white; padding:10px; border:none; border-radius:5px; cursor:pointer;">
-                ELIMINAR
-            </button>
-        </aside>
-
+            <hr style="border:0; border-top:1px solid #333; width:100%">
+            <small style="color:#888">RANKING EN VIVO</small>
+            <div id="rankingList" style="overflow-y:auto; flex:1;"></div>
+        </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-
-        // ELEMENTOS DOM (Mapeados a tu lógica)
+        
+        // ELEMENTOS
         const els = {
+            timer: document.getElementById('timerDisplay'),
+            bank: document.getElementById('bankDisplay'),
             qText: document.getElementById('questionText'),
             aText: document.getElementById('answerText'),
-            timer: document.getElementById('timer'),
-            banked: document.getElementById('bankedDisplay'),
-            round: document.getElementById('roundDisplay'),
             turn: document.getElementById('turnDisplay'),
-            ranking: document.getElementById('ranking'),
-            voteRes: document.getElementById('voteResults'),
-            qCard: document.getElementById('questionCard'),
-            finalDash: document.getElementById('finalDashboard')
+            round: document.getElementById('roundDisplay'),
+            rank: document.getElementById('rankingList'),
+            elSelect: document.getElementById('eliminationSelect')
         };
 
-        // FUNCIONES DE CONTROL
-        function setPhase(phase) { socket.emit('setPhase', phase); }
-        function sendCorrect() { socket.emit('correctAnswer'); }
-        function sendWrong() { socket.emit('wrongAnswer'); }
-        function forceBank() { socket.emit('bank'); } // El Host también puede bancar si quiere
-        function resetGame() { if(confirm('¿Seguro de reiniciar todo?')) socket.emit('resetGame'); }
-        
-        function eliminatePlayer() {
-            const name = document.getElementById('eliminationTarget').value;
-            if(name) {
-                if(confirm(`¿Eliminar a ${name}?`)) {
-                    socket.emit('eliminatePlayer', name.toUpperCase());
-                    document.getElementById('eliminationTarget').value = '';
-                }
-            }
+        function setPhase(p) { socket.emit('setPhase', p); }
+        function eliminate() {
+            const val = els.elSelect.value;
+            if(val && confirm(`¿Eliminar a ${val}?`)) socket.emit('eliminatePlayer', val);
         }
 
-        // SOCKET LISTENERS
-        socket.on('connect', () => { console.log("Host conectado"); });
-
-        socket.on('questionUpdate', (q) => {
-            if(!q) return;
-            els.qText.textContent = q.question;
-            els.aText.textContent = q.answer;
-            els.aText.style.visibility = 'visible'; // Mostrar respuesta al Host siempre
+        // SOCKETS
+        socket.on('timerUpdate', t => els.timer.innerText = t);
+        socket.on('bankState', s => els.bank.innerText = `$${s.bankedTotal}`);
+        socket.on('questionUpdate', q => {
+            if(q) { els.qText.innerText = q.question; els.aText.innerText = q.answer; }
         });
-
-        socket.on('timerUpdate', (t) => {
-            els.timer.textContent = t;
-            els.timer.style.color = t <= 5 ? 'var(--danger)' : 'var(--primary)';
-        });
-
-        socket.on('bankState', (state) => {
-            els.banked.textContent = `$${state.bankedTotal}`;
-        });
-
-        socket.on('roundUpdate', (r) => els.round.textContent = r);
+        socket.on('turnUpdate', p => els.turn.innerText = p || "--");
+        socket.on('roundUpdate', r => els.round.innerText = r);
         
-        socket.on('turnUpdate', (player) => {
-            els.turn.textContent = player || "--";
-        });
-
-        // RANKING TABLE GENERATOR
-        socket.on('rankingUpdate', (data) => {
-            data.sort((a,b) => b.correct - a.correct);
-            let html = `
-                <table class="ranking-table">
-                    <tr><th>JUGADOR</th><th>✔</th><th>✖</th><th>$</th></tr>
-            `;
-            data.forEach(p => {
-                html += `
-                    <tr>
-                        <td style="font-weight:bold; color:white;">${p.name}</td>
-                        <td class="ranking-score">${p.correct}</td>
-                        <td class="ranking-fail">${p.wrong}</td>
-                        <td style="color:var(--accent);">$${p.bankAmount}</td>
-                    </tr>
-                `;
+        socket.on('playersUpdated', players => {
+            // Actualizar Select de Eliminación
+            els.elSelect.innerHTML = '<option value="">Selecciona...</option>';
+            players.forEach(p => {
+                els.elSelect.innerHTML += `<option value="${p}">${p}</option>`;
             });
-            html += '</table>';
-            els.ranking.innerHTML = html;
         });
 
-        // VOTES
-        socket.on('votesUpdated', (data) => {
-            let html = '<ul style="list-style:none; padding:0; margin:0;">';
-            // Mostrar conteo simple
-            for (const [target, count] of Object.entries(data.counts)) {
-                html += `<li style="margin-bottom:5px; border-bottom:1px solid #333; padding-bottom:2px;">
-                            <strong style="color:var(--danger)">${count} votos</strong> contra <strong>${target}</strong>
-                         </li>`;
-            }
-            html += '</ul>';
-            els.voteRes.innerHTML = html || '<small>Sin votos aún</small>';
+        socket.on('rankingUpdate', list => {
+            list.sort((a,b) => b.correct - a.correct);
+            els.rank.innerHTML = list.map(p => `
+                <div class="stat-row">
+                    <span style="font-weight:bold; color:var(--primary)">${p.name}</span>
+                    <span>✔${p.correct} <span style="color:#555">|</span> ✖${p.wrong}</span>
+                </div>
+            `).join('');
         });
 
-        // FASES Y FINAL
-        socket.on('phaseChanged', (phase) => {
-            // Visualmente resaltar el botón activo (opcional)
-            document.querySelectorAll('.control-btn').forEach(b => b.classList.remove('active'));
-            // Lógica de visualización Final
-            if (phase === 'final' || phase === 'final_intro' || phase === 'sudden_death_intro') {
-                els.qCard.style.display = 'none';
-                els.finalDash.style.display = 'block';
-            } else {
-                els.qCard.style.display = 'flex';
-                els.finalDash.style.display = 'none';
-            }
+        socket.on('gameReset', () => {
+            location.reload();
         });
-
-        socket.on('finalUpdate', (stats) => {
-            document.getElementById('fp1Name').textContent = stats.p1.name;
-            document.getElementById('fp1Score').textContent = stats.p1.score;
-            document.getElementById('fp2Name').textContent = stats.p2.name;
-            document.getElementById('fp2Score').textContent = stats.p2.score;
-            
-            if (stats.suddenDeath) {
-                document.getElementById('suddenDeathMsg').classList.remove('hidden');
-            }
-        });
-
     </script>
 </body>
 </html>
