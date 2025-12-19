@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Host – El Rival Más Débil</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Estilos Host */
+    .question-card {
+        background: #ecf0f1; color: #2c3e50; padding: 20px;
+        border-radius: 10px; margin: 20px auto; box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        max-width: 800px; border-left: 10px solid #e74c3c; display: none;
+    }
+    .q-text { font-size: 28px; font-weight: bold; margin-bottom: 10px; display: block; }
+    .a-text { font-size: 24px; color: #27ae60; font-weight: bold; display: block; border-top: 1px solid #ccc; padding-top: 10px; }
+    
+    /* ESTADÍSTICAS */
+    .stats-box { display: flex; justify-content: space-around; background: #2c3e50; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
+    .stat-card { text-align: center; padding: 10px; width: 45%; border-radius: 5px; }
+    .stat-strong { background: #27ae60; color: white; } 
+    .stat-weak { background: #c0392b; color: white; } 
+    .stat-label { font-size: 12px; text-transform: uppercase; display: block; }
+    .stat-name { font-size: 20px; font-weight: bold; display: block; }
+
+    /* VOTOS */
+    .vote-item { background: #34495e; margin: 5px 0; padding: 8px; border-radius: 4px; display: flex; justify-content: space-between; }
+    .vote-voter { font-weight: bold; color: #3498db; }
+    .vote-target { color: #e74c3c; font-weight: bold; }
+    .vote-result-box { background: #f39c12; color: #000; padding: 15px; border-radius: 8px; text-align: center; margin: 10px 0; font-weight: bold; font-size: 20px; border: 3px solid #e67e22; }
+    .vote-tie { background: #e74c3c; color: white; border-color: #c0392b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+    
+    /* ESCALERA */
+    #ladder { display: flex; flex-direction: column-reverse; align-items: center; margin-top: 20px; }
+    .step { width: 100px; padding: 5px; margin: 2px; font-size: 14px; text-align: center; background: #333; border: 1px solid #555; color: #aaa; border-radius: 4px; }
+    .step.active-step { background: #e67e22; color: white; border-color: white; transform: scale(1.1); font-weight: bold; }
+
+    /* RESET BUTTON */
+    .reset-btn { position: absolute; top: 20px; right: 20px; background: #c0392b; color: white; border: 2px solid #e74c3c; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; z-index: 999;}
+    .reset-btn:hover { background: #e74c3c; }
+
+    /* SCOREBOARD FINAL */
+    #finalScoreBoard {
+        background: #000; border: 4px solid #f1c40f; padding: 20px; margin: 20px 0;
+        display: none; justify-content: center; align-items: center; gap: 40px;
+    }
+    .final-player { text-align: center; color: white; }
+    .final-score { font-size: 60px; font-weight: bold; color: #f1c40f; display: block;}
+    .final-vs { font-size: 30px; color: #555; font-style: italic; }
+    .sudden-death-alert { color: red; font-weight: bold; animation: pulse 0.5s infinite; display: block; text-align: center;}
+
+  </style>
+</head>
+<body class="host">
+
+  <button class="reset-btn" onclick="resetGame()">⚠️ REINICIAR JUEGO</button>
+
+  <h1 class="glow-title">EL RIVAL MÁS DÉBIL</h1>
+  
+  <div class="top-bar">
+    <div id="round" class="info-box">Ronda 1</div>
+    <div id="timer" class="info-box">⏱ --</div>
+    <div id="bankedTotalHost" class="info-box">Banco: $0</div>
+  </div>
+
+  <div id="finalScoreBoard">
+      <div class="final-player">
+          <span id="fp1Name" style="font-size:20px;">Jugador 1</span>
+          <span id="fp1Score" class="final-score">0</span>
+      </div>
+      <div class="final-vs">VS</div>
+      <div class="final-player">
+          <span id="fp2Name" style="font-size:20px;">Jugador 2</span>
+          <span id="fp2Score" class="final-score">0</span>
+      </div>
+  </div>
+  <div id="suddenDeathMsg" class="sudden-death-alert" style="display:none;">¡MUERTE SÚBITA!</div>
+
+  <div class="stats-box" id="normalStatsBox">
+      <div class="stat-card stat-strong">
+          <span class="stat-label">Rival Más Fuerte</span>
+          <span id="strongestName" class="stat-name">---</span>
+      </div>
+      <div class="stat-card stat-weak">
+          <span class="stat-label">Rival Más Débil (Estadístico)</span>
+          <span id="weakestName" class="stat-name">---</span>
+      </div>
+  </div>
+
+  <div id="turnDisplay" class="turn-container">
+    <p>Turno de:</p>
+    <h2 id="turnName">Esperando...</h2>
+  </div>
+
+  <div id="questionCard" class="question-card">
+    <span id="questionText" class="q-text">...</span>
+    <span id="answerText" class="a-text">...</span>
+  </div>
+
+  <div class="controls">
+    <button class="btn-correct" onclick="correct()">✔ CORRECTA</button>
+    <button class="btn-bank" onclick="bank()" id="btnBank">💰 BANCA ($)</button>
+    <button class="btn-wrong" onclick="wrong()">✖ INCORRECTA</button>
+  </div>
+
+  <hr>
+
+  <div class="phase-controls" id="normalPhaseControls">
+    <button onclick="setPhase('questions')" style="background:#2980b9;">▶ INICIAR RONDA</button>
+    <button onclick="setPhase('voting')">🗳 Ir a Votación</button>
+  </div>
+  
+  <div class="phase-controls" id="finalPhaseControls" style="display:none;">
+      <button onclick="setPhase('final')" style="background:#8e44ad; width: 100%;">⚔️ INICIAR FINAL 1vs1</button>
+  </div>
+
+  <div class="content-row">
+    <div class="column">
+      <h3>Ranking</h3>
+      <div id="ranking"></div>
+      <hr style="border-color:#444; margin: 20px 0;">
+      <h3>Cadena de Dinero</h3>
+      <div id="ladder"></div>
+    </div>
+
+    <div class="column">
+      <h3>Zona de Eliminación</h3>
+      <div id="voteResultBox" class="vote-result-box">Esperando votos...</div>
+      <select id="eliminateSelect" size="5" style="width: 100%; margin-bottom: 10px;"></select>
+      <button class="btn-eliminate" onclick="eliminate()" id="btnEliminate">💀 ELIMINAR JUGADOR</button>
+      <h3>Detalle de Votos</h3>
+      <div id="votesList" style="background:#222; padding:10px; max-height:200px; overflow-y:auto;">
+          Esperando votos...
+      </div>
+    </div>
+  </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const correct = () => socket.emit("correctAnswer");
+  const wrong = () => socket.emit("wrongAnswer");
+  const bank = () => socket.emit("bank");
+  const setPhase = (p) => socket.emit("setPhase", p);
+  const eliminate = () => {
+    const sel = document.getElementById("eliminateSelect");
+    if(sel.value) socket.emit("eliminatePlayer", sel.value);
+  };
+
+  // NUEVO: Función de Reset
+  const resetGame = () => {
+      if (confirm("¿Estás 100% seguro de que quieres RESETEAR todo el juego? Todos los jugadores serán desconectados.")) {
+          socket.emit("resetGame");
+      }
+  };
+
+  // RECARGA AUTOMÁTICA AL RESETEAR
+  socket.on("gameReset", () => {
+      location.reload();
+  });
+
+  socket.on("phaseChanged", phase => {
+      const qCard = document.getElementById("questionCard");
+      const tDisplay = document.getElementById("turnDisplay");
+      
+      // Control de visibilidad para Final vs Normal
+      const isFinalPhase = (phase === "final" || phase === "final_intro");
+
+      if (isFinalPhase) {
+          document.getElementById("finalScoreBoard").style.display = "flex";
+          document.getElementById("normalStatsBox").style.display = "none";
+          document.getElementById("normalPhaseControls").style.display = "none";
+          document.getElementById("finalPhaseControls").style.display = "flex";
+          document.getElementById("btnBank").disabled = true; // No hay banco en final
+          document.getElementById("btnBank").style.opacity = "0.3";
+          document.getElementById("btnEliminate").disabled = true;
+          document.getElementById("btnEliminate").style.opacity = "0.3";
+      } else {
+          document.getElementById("finalScoreBoard").style.display = "none";
+          document.getElementById("normalStatsBox").style.display = "flex";
+          document.getElementById("normalPhaseControls").style.display = "block";
+          document.getElementById("finalPhaseControls").style.display = "none";
+          document.getElementById("btnBank").disabled = false;
+          document.getElementById("btnBank").style.opacity = "1";
+          document.getElementById("btnEliminate").disabled = false;
+          document.getElementById("btnEliminate").style.opacity = "1";
+      }
+
+      if (phase === "questions" || phase === "final") {
+          qCard.style.display = "block";
+          tDisplay.style.display = "block";
+      } else {
+          qCard.style.display = "none";
+          tDisplay.style.display = "none";
+      }
+  });
+
+  socket.on("timerUpdate", t => document.getElementById("timer").textContent = `⏱ ${t}s`);
+  socket.on("roundUpdate", r => document.getElementById("round").textContent = `Ronda ${r}`);
+  socket.on("bankState", s => { 
+      document.getElementById("bankedTotalHost").textContent = `Banco: $${s.bankedTotal}`; 
+      const ladder = document.getElementById("ladder");
+      if (ladder) {
+          ladder.innerHTML = "";
+          [...s.chain].reverse().forEach((amount, index) => {
+              const originalIndex = s.chain.length - 1 - index;
+              const step = document.createElement("div");
+              step.className = "step";
+              step.textContent = `$${amount}`;
+              if (originalIndex === s.chainIndex) {
+                  step.classList.add("active-step");
+              }
+              ladder.appendChild(step);
+          });
+      }
+  });
+  
+  socket.on("questionUpdate", data => {
+      if(data) {
+        document.getElementById("questionText").textContent = data.q;
+        document.getElementById("answerText").textContent = "R: " + data.a;
+      }
+  });
+
+  socket.on("turnUpdate", name => {
+    const el = document.getElementById("turnName");
+    el.textContent = name || "—";
+    el.style.color = "#e74c3c"; 
+    setTimeout(() => el.style.color = "white", 300);
+  });
+  
+  socket.on("playersUpdated", list => {
+    const sel = document.getElementById("eliminateSelect");
+    sel.innerHTML = "";
+    list.forEach(n => {
+      const opt = document.createElement("option");
+      opt.value = n; opt.textContent = n;
+      sel.appendChild(opt);
+    });
+  });
+  
+  socket.on("statsAnalysis", data => {
+      document.getElementById("strongestName").textContent = data.strongest || "---";
+      document.getElementById("weakestName").textContent = data.weakest || "---";
+  });
+
+  socket.on("votesUpdated", data => {
+    const container = document.getElementById("votesList");
+    const resultBox = document.getElementById("voteResultBox");
+    container.innerHTML = "";
+    
+    if (data.details.length === 0) {
+        container.innerHTML = "Esperando votos...";
+        resultBox.textContent = "Esperando votos...";
+        resultBox.className = "vote-result-box";
+        return;
+    }
+
+    data.details.forEach(vote => {
+        const div = document.createElement("div");
+        div.className = "vote-item";
+        div.innerHTML = `<span class="vote-voter">${vote.voter}</span> ➔ <span class="vote-target">${vote.target}</span>`;
+        container.appendChild(div);
+    });
+
+    const counts = data.counts;
+    let maxVotes = 0;
+    let leaders = [];
+    for (const [name, count] of Object.entries(counts)) {
+        if (count > maxVotes) {
+            maxVotes = count;
+            leaders = [name];
+        } else if (count === maxVotes) {
+            leaders.push(name);
+        }
+    }
+    if (leaders.length > 1) {
+        resultBox.innerHTML = `¡EMPATE!<br><small>(${leaders.join(", ")})</small>`;
+        resultBox.classList.add("vote-tie");
+    } else {
+        resultBox.textContent = `Más Votado: ${leaders[0]} (${maxVotes})`;
+        resultBox.className = "vote-result-box"; 
+    }
+  });
+
+  // NUEVO: ACTUALIZACIÓN SCOREBOARD FINAL
+  socket.on("finalUpdate", stats => {
+      document.getElementById("fp1Name").textContent = stats.p1.name;
+      document.getElementById("fp1Score").textContent = stats.p1.score;
+      document.getElementById("fp2Name").textContent = stats.p2.name;
+      document.getElementById("fp2Score").textContent = stats.p2.score;
+      
+      if(stats.suddenDeath) {
+          document.getElementById("suddenDeathMsg").style.display = "block";
+      } else {
+          document.getElementById("suddenDeathMsg").style.display = "none";
+      }
+  });
+  
+  socket.on("rankingUpdate", ranking => {
+    const div = document.getElementById("ranking");
+    ranking.sort((a,b) => b.correct - a.correct); 
+    let html = `<table border="1" style="width:100%; text-align:center; font-size:14px;"><tr><th>Jugador</th><th>✔</th><th>✖</th><th>$</th></tr>`;
+    ranking.forEach(p => {
+      html += `<tr><td>${p.name}</td><td style="color:lightgreen">${p.correct}</td><td style="color:salmon">${p.wrong}</td><td style="color:gold">$${p.bankAmount}</td></tr>`;
+    });
+    div.innerHTML = html + "</table>";
+  });
+</script>
+</body>
+</html>
