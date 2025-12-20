@@ -1,7 +1,6 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const questionsList = require("./questions"); 
 
 const app = express();
 const server = http.createServer(app);
@@ -9,9 +8,23 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(__dirname));
 
+// --- LISTA DE PREGUNTAS DE RESPALDO (Para evitar "Undefined") ---
+const questionsList = [
+    { question: "¿Cuál es el planeta más cercano al Sol?", answer: "Mercurio" },
+    { question: "¿Cuántos lados tiene un hexágono?", answer: "Seis" },
+    { question: "¿En qué país se encuentra la Torre Eiffel?", answer: "Francia" },
+    { question: "¿Qué elemento químico es la H?", answer: "Hidrógeno" },
+    { question: "¿Quién escribió Don Quijote?", answer: "Cervantes" },
+    { question: "¿Capital de Italia?", answer: "Roma" },
+    { question: "¿Color de la esperanza?", answer: "Verde" },
+    { question: "¿Moneda de Japón?", answer: "Yen" },
+    { question: "¿Cuántas patas tiene una araña?", answer: "Ocho" },
+    { question: "¿Metal más caro del mundo?", answer: "Rodio / Oro" }
+];
+
 // CONFIGURACIÓN
 const ROUND_TIME_BASE = 20; 
-const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; 
+const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; // Valores de la escalera
 
 let gameState = {
     players: [],
@@ -46,7 +59,7 @@ const broadcastState = () => {
     io.emit("turnUpdate", getCurrentPlayer());
     updateRanking();
     
-    // Si estamos en preguntas, asegurar que el host tenga la pregunta actual
+    // IMPORTANTE: Enviar pregunta siempre que estemos en fase de preguntas
     if(gameState.phase === "questions") {
         io.emit("questionUpdate", questionsList[gameState.questionIndex]);
     }
@@ -64,9 +77,11 @@ const updateRanking = () => {
 
 // SOCKETS
 io.on("connection", (socket) => {
-    // Estado inicial
     socket.emit("phaseChanged", gameState.phase);
     socket.emit("playersUpdated", gameState.players);
+    // Enviar pregunta actual al conectar si ya empezó
+    if(gameState.phase === "questions") socket.emit("questionUpdate", questionsList[gameState.questionIndex]);
+    
     broadcastState();
 
     socket.on("registerPlayer", (name) => {
@@ -79,8 +94,8 @@ io.on("connection", (socket) => {
             io.emit("playersUpdated", gameState.players);
             updateRanking();
         } else {
-             playerSockets[socket.id] = cleanName; // Reconexión
-             io.emit("playersUpdated", gameState.players); // Asegurar que el host tenga la lista
+             playerSockets[socket.id] = cleanName; 
+             io.emit("playersUpdated", gameState.players);
         }
     });
 
@@ -94,7 +109,7 @@ io.on("connection", (socket) => {
             final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
         };
         playerSockets = {};
-        io.emit("gameReset"); // Esto limpia al cliente
+        io.emit("gameReset");
         io.emit("playersUpdated", []); 
         broadcastState();
     });
@@ -103,7 +118,7 @@ io.on("connection", (socket) => {
         gameState.phase = phase;
         
         if (phase === "questions") {
-            io.emit("questionUpdate", questionsList[gameState.questionIndex]); // FIX: Enviar pregunta inmediatamente
+            io.emit("questionUpdate", questionsList[gameState.questionIndex]);
             startTimer();
         } else {
             clearInterval(timerInterval);
@@ -168,16 +183,14 @@ io.on("connection", (socket) => {
         if (gameState.turnIndex >= gameState.turnOrder.length) gameState.turnIndex = 0;
         
         gameState.votes = {};
-        
         io.emit("playerEliminated", name);
         io.emit("playersUpdated", gameState.players);
         
-        // Check Final
         if (gameState.players.length === 2) {
              setupFinal();
         } else {
              gameState.round++;
-             gameState.phase = "waiting"; // Pausa breve antes de seguir
+             gameState.phase = "waiting"; 
              broadcastState();
         }
     });
@@ -198,7 +211,7 @@ function startTimer() {
         io.emit("timerUpdate", gameState.timer);
         if (gameState.timer <= 0) {
             clearInterval(timerInterval);
-            gameState.phase = "times_up";
+            gameState.phase = "times_up"; // FASE CRÍTICA
             broadcastState();
         }
     }, 1000);
@@ -214,14 +227,11 @@ function setupFinal() {
 }
 
 function handleFinalAnswer(isCorrect) {
-    // Logica simplificada final para demo
     const p = getCurrentPlayer();
     const isP1 = p === gameState.final.p1.name;
     const target = isP1 ? gameState.final.p1 : gameState.final.p2;
-    
     target.history.push(isCorrect);
     if(isCorrect) target.score++;
-    
     io.emit("finalUpdate", gameState.final);
     advanceTurn();
     broadcastState();
