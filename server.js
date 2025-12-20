@@ -8,7 +8,7 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(__dirname));
 
-// --- PREGUNTAS DE RESPALDO ---
+// --- PREGUNTAS ---
 const questionsList = [
     { question: "¿Planeta más cercano al Sol?", answer: "Mercurio" },
     { question: "¿Lados de un hexágono?", answer: "Seis" },
@@ -19,14 +19,12 @@ const questionsList = [
     { question: "¿Color de la esperanza?", answer: "Verde" },
     { question: "¿Moneda de Japón?", answer: "Yen" },
     { question: "¿Patas de una araña?", answer: "Ocho" },
-    { question: "¿Metal precioso amarillo?", answer: "Oro" },
-    { question: "¿Animal que maúlla?", answer: "Gato" },
-    { question: "¿Día de Navidad?", answer: "25 Diciembre" }
+    { question: "¿Metal precioso amarillo?", answer: "Oro" }
 ];
 
 // CONFIGURACIÓN
 const ROUND_TIME_BASE = 20; 
-const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; // 7 niveles (indices 0 a 6)
+const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; 
 
 let gameState = {
     players: [],
@@ -37,28 +35,25 @@ let gameState = {
     timer: ROUND_TIME_BASE,
     bank: { total: 0, chainIndex: -1, currentValue: 0 },
     questionIndex: 0,
-    stats: {}, // { name: { correct, wrong, bankAmount, bankCount } }
-    votes: {}, // Conteo { "JUAN": 2 }
-    detailedVotes: [], // Detalle [{ voter: "PEDRO", target: "JUAN" }]
+    stats: {}, 
+    votes: {}, 
+    detailedVotes: [],
     final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
 };
 
 let timerInterval = null;
 let playerSockets = {}; 
 
-// HELPERS
 const getCurrentPlayer = () => gameState.turnOrder[gameState.turnIndex % gameState.turnOrder.length] || "Nadie";
 
-// Identificar al jugador más fuerte (basado en aciertos)
 const getStrongestPlayerName = () => {
     if (gameState.players.length === 0) return null;
-    // Ordenar por aciertos descendente
     const sorted = [...gameState.players].sort((a, b) => {
         const statsA = gameState.stats[a] || { correct: 0 };
         const statsB = gameState.stats[b] || { correct: 0 };
         return statsB.correct - statsA.correct;
     });
-    return sorted[0]; // El primero es el más fuerte
+    return sorted[0];
 };
 
 const broadcastState = () => {
@@ -89,53 +84,29 @@ const updateRanking = () => {
     io.emit("rankingUpdate", ranking);
 };
 
-// CHECK VOTING RESULTS
 const checkVotingResults = () => {
-    // Si ya votaron todos los jugadores activos
     const activeVoters = gameState.players.length;
     const votesCast = gameState.detailedVotes.length;
 
     if (votesCast >= activeVoters) {
-        // Calcular quién tiene más votos
         let counts = {};
-        gameState.detailedVotes.forEach(v => {
-            counts[v.target] = (counts[v.target] || 0) + 1;
-        });
+        gameState.detailedVotes.forEach(v => { counts[v.target] = (counts[v.target] || 0) + 1; });
 
-        // Encontrar el máximo
         let maxVotes = 0;
         let candidates = [];
         for (const [player, count] of Object.entries(counts)) {
-            if (count > maxVotes) {
-                maxVotes = count;
-                candidates = [player];
-            } else if (count === maxVotes) {
-                candidates.push(player);
-            }
+            if (count > maxVotes) { maxVotes = count; candidates = [player]; } 
+            else if (count === maxVotes) { candidates.push(player); }
         }
 
-        const strongest = getStrongestPlayerName();
-
         if (candidates.length === 1) {
-            // Un solo perdedor
-            io.emit("votingResult", { 
-                type: "clear", 
-                target: candidates[0], 
-                count: maxVotes 
-            });
+            io.emit("votingResult", { type: "clear", target: candidates[0], count: maxVotes });
         } else {
-            // Empate
-            io.emit("votingResult", { 
-                type: "tie", 
-                targets: candidates, 
-                count: maxVotes,
-                decisionMaker: strongest 
-            });
+            io.emit("votingResult", { type: "tie", targets: candidates, count: maxVotes, decisionMaker: getStrongestPlayerName() });
         }
     }
 };
 
-// SOCKETS
 io.on("connection", (socket) => {
     socket.emit("phaseChanged", gameState.phase);
     socket.emit("playersUpdated", gameState.players);
@@ -180,11 +151,15 @@ io.on("connection", (socket) => {
             startTimer();
         } else if (phase === "voting") {
             clearInterval(timerInterval);
-            // Limpiar votos previos al iniciar votación
+            
+            // PUNTO 2: Reiniciar escalera al entrar a votación
+            gameState.bank.chainIndex = -1;
+            gameState.bank.currentValue = 0;
+            
             gameState.votes = {};
             gameState.detailedVotes = [];
             io.emit("votesUpdated", { summary: {}, details: [] });
-            io.emit("votingResult", null); // Limpiar mensajes de alerta
+            io.emit("votingResult", null);
         } else {
             clearInterval(timerInterval);
         }
@@ -197,26 +172,19 @@ io.on("connection", (socket) => {
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].correct++;
         
-        // LOGICA DE ESCALERA
-        // Si estamos en el penúltimo paso (índice 5 -> 50) y acierta, pasa al último (índice 6 -> 100)
-        // PUNTO 4: AUTO-BANK SI ES MÁXIMO
+        // Auto-Banca al máximo
         const maxIndex = CHAIN_VALUES.length - 1;
-        
         if (gameState.bank.chainIndex === maxIndex - 1) {
-            // Acaba de acertar para llegar al máximo (100) -> AUTO BANK
             const maxVal = CHAIN_VALUES[maxIndex];
             gameState.bank.total += maxVal;
             if (gameState.stats[player]) {
                 gameState.stats[player].bankAmount += maxVal;
                 gameState.stats[player].bankCount++;
             }
-            // Reiniciar escalera
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
-            io.emit("bankSuccess"); // Sonido
-            
+            io.emit("bankSuccess");
         } else {
-            // Comportamiento normal, subir un escalón
             if (gameState.bank.chainIndex < maxIndex) {
                 gameState.bank.chainIndex++;
                 gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
@@ -230,13 +198,10 @@ io.on("connection", (socket) => {
 
     socket.on("wrongAnswer", () => {
         if (gameState.final.active) { handleFinalAnswer(false); return; }
-        
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].wrong++;
-        
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
-        
         gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
         advanceTurn();
         broadcastState();
@@ -250,7 +215,6 @@ io.on("connection", (socket) => {
                 gameState.stats[player].bankAmount += gameState.bank.currentValue;
                 gameState.stats[player].bankCount++;
             }
-            
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             broadcastState();
@@ -261,8 +225,6 @@ io.on("connection", (socket) => {
     socket.on("vote", (target) => {
         const voterName = playerSockets[socket.id];
         if (voterName && gameState.players.includes(voterName)) {
-            
-            // Evitar doble voto
             const alreadyVoted = gameState.detailedVotes.find(v => v.voter === voterName);
             if (alreadyVoted) return;
 
@@ -270,8 +232,6 @@ io.on("connection", (socket) => {
             gameState.detailedVotes.push({ voter: voterName, target: target });
             
             io.emit("votesUpdated", { summary: gameState.votes, details: gameState.detailedVotes });
-            
-            // PUNTO 7 y 8: Verificar resultados
             checkVotingResults();
         }
     });
@@ -281,7 +241,6 @@ io.on("connection", (socket) => {
         gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
         if (gameState.turnIndex >= gameState.turnOrder.length) gameState.turnIndex = 0;
         
-        // Limpiar datos de votación
         gameState.votes = {};
         gameState.detailedVotes = [];
         
@@ -307,7 +266,6 @@ function startTimer() {
     clearInterval(timerInterval);
     gameState.timer = Math.max(10, ROUND_TIME_BASE - ((gameState.round - 1) * 2));
     io.emit("timerUpdate", gameState.timer);
-    
     timerInterval = setInterval(() => {
         gameState.timer--;
         io.emit("timerUpdate", gameState.timer);
