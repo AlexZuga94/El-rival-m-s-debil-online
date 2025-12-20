@@ -8,57 +8,32 @@
     <style>
         :root { --bg: #000000; --primary: #00d2ff; --accent: #f1c40f; --danger: #ff0055; --glass: rgba(255,255,255,0.08); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        /* HEADER FIJO MEJORADO */
         header { 
             position: fixed; top: 0; left: 0; width: 100%; height: 85px;
             display: grid; grid-template-columns: 1fr auto; align-items: center; 
             padding: 10px 20px; 
             background: #0a0a0a; border-bottom: 1px solid #333; z-index: 1000;
         }
-        
         .header-info { display: flex; flex-direction: column; text-align: left; }
         .app-title { font-weight:900; font-size:1.3rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1.1; }
         .app-subtitle { font-size: 0.8rem; color: #888; margin-top: 5px; font-weight: 300; }
-        
-        .header-timer { 
-            font-size: 2.8rem; font-weight: 700; color: white; 
-            min-width: 80px; text-align: right; line-height: 1;
-        }
+        .header-timer { font-size: 2.8rem; font-weight: 700; color: white; min-width: 80px; text-align: right; line-height: 1; }
         .timer-warn { color: var(--accent); }
         .timer-crit { color: var(--danger); animation: pulse 0.5s infinite; }
-
         .highlight-name { color: var(--accent); font-weight: bold; }
 
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
 
-        /* JUEGO: Margen superior para que el Banco baje y no choque con Header */
-        #gameScreen { 
-            padding-top: 90px; /* Espacio exacto del header + un poco más */
-            justify-content: flex-start; 
-        }
-
-        /* BANCO: Z-Index alto para asegurar visibilidad */
-        .bank-info { 
-            width:100%; background:#111; padding:15px; text-align:center; 
-            border-bottom:1px solid #333; 
-            position: relative; z-index: 50; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
+        #gameScreen { padding-top: 90px; justify-content: flex-start; }
+        .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; position: relative; z-index: 50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
         .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
 
-        #ladderContainer { 
-            flex:1; display:flex; flex-direction: column-reverse; 
-            justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; overflow-y: auto;
-        }
-        .step { 
-            width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; 
-            display: flex; justify-content: center; align-items: center; 
-        }
+        #ladderContainer { flex:1; display:flex; flex-direction: column-reverse; justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; overflow-y: auto; }
+        .step { width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; display: flex; justify-content: center; align-items: center; }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
 
         .login-box { width:80%; text-align:center; }
@@ -82,6 +57,17 @@
         #eliminatedScreen { background:rgba(0,0,0,0.98); }
         .elim-icon { font-size:6rem; margin-bottom:20px; color: var(--danger); text-shadow: 0 0 30px var(--danger); }
         .elim-text { font-size:1.8rem; font-weight:bold; color: white; line-height: 1.4; }
+
+        /* --- NUEVO: PANTALLA DE PENALES (OVALOS) --- */
+        #penaltyScreen { background: #000; padding-top: 90px; }
+        .penalty-container { display: flex; flex-direction: column; width: 100%; height: 100%; justify-content: center; gap: 30px; }
+        .p-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .p-name { width: 80px; text-align: right; font-weight: bold; font-size: 1.2rem; color: var(--primary); }
+        .ovals-wrapper { display: flex; gap: 8px; }
+        .oval { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #333; background: #111; transition: 0.3s; }
+        .oval.correct { background: var(--success); box-shadow: 0 0 10px var(--success); border-color: var(--success); }
+        .oval.wrong { background: var(--danger); box-shadow: 0 0 10px var(--danger); border-color: var(--danger); }
+        .oval.current { border-color: var(--accent); animation: pulse 1s infinite; }
 
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes zoomGlow { to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } }
@@ -118,18 +104,31 @@
             <div class="bank-total-label">BANCO ACUMULADO</div>
             <div id="bankTotal" class="bank-total-val">$0</div>
         </div>
-        
         <div id="ladderContainer"></div>
-        
         <div id="waitingOverlay" class="overlay" style="background:rgba(0,0,0,0.8);">
             <div id="roundWaitMsg" style="font-size:1.5rem; color:var(--primary); font-weight:bold;">Esperando inicio...</div>
         </div>
     </div>
 
+    <div id="penaltyScreen" class="screen">
+        <h2 style="color:var(--accent); text-transform:uppercase; margin-bottom:40px;">Ronda Final</h2>
+        <div class="penalty-container">
+            <div class="p-row">
+                <div id="penP1Name" class="p-name">P1</div>
+                <div id="penP1Ovals" class="ovals-wrapper"></div>
+            </div>
+            <div class="p-row">
+                <div id="penP2Name" class="p-name">P2</div>
+                <div id="penP2Ovals" class="ovals-wrapper"></div>
+            </div>
+        </div>
+        <div style="margin-top:20px; color:#888;">PENALES / MUERTE SÚBITA</div>
+    </div>
+
     <div id="timesUpScreen" class="overlay">
         <div class="tu-icon">⏰</div>
         <h1 style="font-size:3rem; margin:10px 0;">¡TIEMPO!</h1>
-        <p style="font-size:1.2rem;">Fin de la ronda.<br>Es hora de votar.</p>
+        <p style="font-size:1.2rem;">Fin de la ronda.</p>
     </div>
 
     <div id="voteScreen" class="overlay">
@@ -148,12 +147,13 @@
         let myName = "";
         let isEliminated = false;
         let currentRound = 1;
-        let myEliminationRound = null; // Variable para congelar la ronda
+        let myEliminationRound = null;
         
         const els = {
             login: document.getElementById('loginScreen'),
             intro: document.getElementById('introScreen'),
             game: document.getElementById('gameScreen'),
+            penalty: document.getElementById('penaltyScreen'), // NUEVO
             vote: document.getElementById('voteScreen'),
             timesUp: document.getElementById('timesUpScreen'),
             elim: document.getElementById('eliminatedScreen'),
@@ -166,7 +166,13 @@
             introName: document.getElementById('intro1'),
             headerSub: document.getElementById('headerSubTitle'),
             miniTimer: document.getElementById('miniTimer'),
-            elimMsg: document.getElementById('elimMsg')
+            elimMsg: document.getElementById('elimMsg'),
+            
+            // Penales
+            p1Name: document.getElementById('penP1Name'),
+            p1Ovals: document.getElementById('penP1Ovals'),
+            p2Name: document.getElementById('penP2Name'),
+            p2Ovals: document.getElementById('penP2Ovals')
         };
 
         function enterGame() {
@@ -174,13 +180,10 @@
             if(!name) return;
             myName = name;
             socket.emit('registerPlayer', name);
-            
             els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, estás jugando a El Rival más Débil`;
-
             els.login.classList.remove('active');
             els.intro.classList.add('active');
             els.introName.innerText = `¡Hola ${name}!`;
-            
             setTimeout(() => {
                 els.intro.classList.remove('active');
                 els.game.classList.add('active');
@@ -194,18 +197,14 @@
         socket.on('playerEliminated', (name) => {
             if(name.toUpperCase() === myName.toUpperCase()) {
                 isEliminated = true;
-                myEliminationRound = currentRound; // CONGELAR RONDA
-                
+                myEliminationRound = currentRound;
                 els.elimMsg.innerText = `${myName}, has sido el rival más débil de la ronda ${myEliminationRound}`;
                 els.elim.style.display = 'flex';
-                
                 setTimeout(() => {
                     els.elim.style.display = 'none'; 
                     els.game.classList.add('active'); 
-                    
                     els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, has sido el rival más débil de la ronda ${myEliminationRound}`;
                     els.headerSub.style.color = "var(--danger)";
-                    
                     els.waitOver.style.display = 'flex';
                     els.waitMsg.innerText = "MODO ESPECTADOR";
                 }, 4000);
@@ -222,26 +221,42 @@
         socket.on('phaseChanged', (phase) => {
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
+            els.game.classList.remove('active'); // Ocultar juego normal por defecto
+            els.penalty.classList.remove('active'); // Ocultar penales por defecto
+            
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
 
             if (isEliminated) {
-                if(phase === 'waiting') {
+                // Modo espectador simple: siempre ven el juego de fondo (o penales si es el caso)
+                 if(phase === 'penalty') els.penalty.classList.add('active');
+                 else els.game.classList.add('active');
+                 
+                 if(phase === 'waiting') {
                     els.waitOver.style.display = 'flex';
                     els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
-                }
+                 }
                 return; 
             }
 
             if(phase === 'waiting') {
+                els.game.classList.add('active');
                 els.waitOver.style.display = 'flex';
                 els.waitMsg.innerText = "Atención al Host...";
             }
+            else if(phase === 'questions') {
+                els.game.classList.add('active');
+            }
             else if(phase === 'times_up') {
+                els.game.classList.add('active');
                 els.timesUp.style.display = 'flex';
                 if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
             }
             else if(phase === 'voting') {
+                els.game.classList.add('active');
                 els.vote.style.display = 'flex';
+            }
+            else if(phase === 'penalty') {
+                els.penalty.classList.add('active');
             }
         });
 
@@ -254,7 +269,6 @@
 
         socket.on('bankState', state => {
             els.bank.innerText = `$${state.bankedTotal}`;
-            
             els.ladder.innerHTML = '';
             state.chain.forEach((val, idx) => {
                 const div = document.createElement('div');
@@ -281,6 +295,41 @@
                     els.vGrid.appendChild(btn);
                 }
             });
+        });
+
+        // NUEVO: ACTUALIZACIÓN DE PENALES
+        socket.on('finalState', final => {
+            els.p1Name.innerText = final.p1.name;
+            els.p2Name.innerText = final.p2.name;
+            
+            // Render Ovals P1
+            els.p1Ovals.innerHTML = '';
+            // Generar 5 vacíos base, y llenar con historia
+            const maxSlots = Math.max(5, final.p1.history.length + 1);
+            for(let i=0; i<maxSlots; i++) {
+                const div = document.createElement('div');
+                div.className = 'oval';
+                if (i < final.p1.history.length) {
+                    div.classList.add(final.p1.history[i] ? 'correct' : 'wrong');
+                } else if (i === final.p1.history.length && final.turn === 0) {
+                    div.classList.add('current');
+                }
+                els.p1Ovals.appendChild(div);
+            }
+
+            // Render Ovals P2
+            els.p2Ovals.innerHTML = '';
+            const maxSlots2 = Math.max(5, final.p2.history.length + 1);
+            for(let i=0; i<maxSlots2; i++) {
+                const div = document.createElement('div');
+                div.className = 'oval';
+                if (i < final.p2.history.length) {
+                    div.classList.add(final.p2.history[i] ? 'correct' : 'wrong');
+                } else if (i === final.p2.history.length && final.turn === 1) {
+                    div.classList.add('current');
+                }
+                els.p2Ovals.appendChild(div);
+            }
         });
     </script>
 </body>
