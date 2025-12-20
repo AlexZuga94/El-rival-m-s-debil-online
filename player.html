@@ -10,57 +10,54 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        /* HEADER MEJORADO (Puntos 2 y 3) */
         header { padding:15px; text-align:center; border-bottom:1px solid #333; background:#0a0a0a; z-index:10; }
         .app-title { font-weight:900; font-size:1.8rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1; }
         .app-subtitle { font-size: 0.9rem; color: #888; margin-top: 5px; font-weight: 300; }
         .highlight-name { color: var(--accent); font-weight: bold; }
 
-        /* PANTALLAS */
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
 
-        /* LOGIN */
         .login-box { width:80%; text-align:center; }
         input { width:100%; padding:15px; background:#222; border:none; color:white; font-size:1.2rem; text-align:center; border-radius:10px; margin-bottom:15px; }
         .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; }
 
-        /* INTRO */
         #introScreen { background: black; text-align:center; padding:20px; }
         .intro-text-1 { font-size:2rem; font-weight:300; animation: fadeIn 1s forwards; opacity:0; }
         .intro-text-2 { font-size:1.5rem; margin-top:10px; color:#888; animation: fadeIn 1s forwards 1s; opacity:0; }
         .intro-logo { font-size:3rem; font-weight:900; margin-top:20px; color:var(--primary); text-transform:uppercase; text-shadow:0 0 20px var(--primary); animation: zoomGlow 1.5s forwards 2s; opacity:0; transform:scale(0.5); }
 
-        /* GAME */
-        #gameScreen { padding-top:90px; /* espacio para header más grande */ justify-content: flex-start; }
+        #gameScreen { padding-top:90px; justify-content: flex-start; }
         
-        #ladderContainer { flex:1; display:flex; flex-direction:column-reverse; justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; }
+        /* PUNTO 4: ESCALERA INVERTIDA (column-reverse hace que el 1er elemento HTML esté abajo) */
+        #ladderContainer { 
+            flex:1; display:flex; flex-direction: column-reverse; 
+            justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; 
+        }
         .step { width:90%; padding:10px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
-        .step.passed { color:var(--primary); background:transparent; border:1px solid var(--primary); }
 
         .bank-info { position:absolute; bottom:0; width:100%; background:#111; padding:20px; text-align:center; border-top:1px solid #333; }
         .bank-total-label { font-size:0.8rem; color:#888; }
         .bank-total-val { font-size:2rem; color:var(--accent); font-weight:bold; }
 
-        /* OVERLAYS */
         .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:50; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
-        #roundWaitMsg { font-size:1.5rem; color:var(--primary); font-weight:bold; animation: pulse 1s infinite; }
-
         #votingGrid { display:grid; grid-template-columns:1fr 1fr; gap:15px; width:90%; margin-top:20px; }
         .vote-btn { padding:20px; background:#222; border:1px solid #444; color:white; font-weight:bold; font-size:1rem; border-radius:10px; }
         .vote-btn:active { background:var(--primary); color:black; }
 
-        /* PUNTO 4: ELIMINADO CON TACHE ROJO */
+        /* PUNTO 2: PANTALLA TIEMPO */
+        #timesUpScreen { background: rgba(200, 0, 0, 0.95); }
+        .tu-icon { font-size: 5rem; animation: shake 0.5s infinite; }
+        
         #eliminatedScreen { background:rgba(0,0,0,0.95); }
         .elim-icon { font-size:6rem; margin-bottom:20px; color: var(--danger); text-shadow: 0 0 30px var(--danger); }
         .elim-text { font-size:1.5rem; font-weight:bold; color: white; line-height: 1.5; }
-        .elim-sub { color: #888; margin-top: 20px; }
 
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes zoomGlow { to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } }
-        @keyframes pulse { 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
+        @keyframes shake { 0%, 100% { transform:translateX(0); } 25% { transform:translateX(-5px); } 75% { transform:translateX(5px); } }
     </style>
 </head>
 <body>
@@ -92,8 +89,14 @@
         </div>
         
         <div id="waitingOverlay" class="overlay" style="background:rgba(0,0,0,0.8);">
-            <div id="roundWaitMsg">Esperando inicio...</div>
+            <div id="roundWaitMsg" style="font-size:1.5rem; color:var(--primary); font-weight:bold;">Esperando inicio...</div>
         </div>
+    </div>
+
+    <div id="timesUpScreen" class="overlay">
+        <div class="tu-icon">⏰</div>
+        <h1 style="font-size:3rem; margin:10px 0;">¡TIEMPO!</h1>
+        <p style="font-size:1.2rem;">Fin de la ronda.<br>Es hora de votar.</p>
     </div>
 
     <div id="voteScreen" class="overlay">
@@ -102,15 +105,16 @@
     </div>
 
     <div id="eliminatedScreen" class="overlay">
-        <div class="elim-icon">❌</div> <div id="elimMsg" class="elim-text">Has sido eliminado.</div>
-        <div class="elim-sub">Gracias por participar.</div>
+        <div class="elim-icon">❌</div>
+        <div id="elimMsg" class="elim-text">Has sido eliminado.</div>
+        <div style="color:#888; margin-top:20px;">Gracias por participar.</div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let myName = "";
-        let currentRound = 1; // Para saber la ronda al ser eliminado
+        let currentRound = 1;
         
         const els = {
             login: document.getElementById('loginScreen'),
@@ -118,14 +122,16 @@
             game: document.getElementById('gameScreen'),
             vote: document.getElementById('voteScreen'),
             elim: document.getElementById('eliminatedScreen'),
-            elimMsg: document.getElementById('elimMsg'),
+            timesUp: document.getElementById('timesUpScreen'),
+            
             ladder: document.getElementById('ladderContainer'),
             bank: document.getElementById('bankTotal'),
             waitOver: document.getElementById('waitingOverlay'),
             waitMsg: document.getElementById('roundWaitMsg'),
             vGrid: document.getElementById('votingGrid'),
             introName: document.getElementById('intro1'),
-            headerSub: document.getElementById('headerSubTitle')
+            headerSub: document.getElementById('headerSubTitle'),
+            elimMsg: document.getElementById('elimMsg')
         };
 
         function enterGame() {
@@ -133,8 +139,6 @@
             if(!name) return;
             myName = name;
             socket.emit('registerPlayer', name);
-            
-            // Actualizar Subtítulo (Punto 3)
             els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span> estás jugando a El Rival más Débil`;
 
             els.login.classList.remove('active');
@@ -153,26 +157,34 @@
 
         socket.on('playerEliminated', (name) => {
             if(name.toUpperCase() === myName.toUpperCase()) {
-                // PUNTO 4: Mensaje Personalizado con Ronda
                 els.elimMsg.innerText = `${myName}, en la ronda ${currentRound} has sido el rival más débil.`;
                 els.elim.style.display = 'flex'; 
             }
         });
 
         socket.on('phaseChanged', (phase) => {
-            if(phase !== 'waiting') els.waitOver.style.display = 'none';
+            // Resetear overlays
             els.vote.style.display = 'none';
+            els.timesUp.style.display = 'none'; // Ocultar Time's Up si cambiamos de fase
+            if(phase !== 'waiting') els.waitOver.style.display = 'none';
 
             if(phase === 'waiting') {
                 els.waitOver.style.display = 'flex';
                 els.waitMsg.innerText = "Atención al Host...";
             }
-            if(phase === 'questions') els.waitOver.style.display = 'none';
-            if(phase === 'voting') els.vote.style.display = 'flex';
+            // PUNTO 2: Mostrar pantalla de TIEMPO
+            else if(phase === 'times_up') {
+                els.timesUp.style.display = 'flex';
+                // Vibración
+                if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+            }
+            else if(phase === 'voting') {
+                els.vote.style.display = 'flex';
+            }
         });
 
         socket.on('roundUpdate', r => {
-            currentRound = r; // Guardamos ronda actual
+            currentRound = r;
             if(els.waitMsg.innerText.includes("Esperando") || els.waitMsg.innerText.includes("Atención")) {
                 els.waitMsg.innerText = `Esperando comenzar RONDA ${r}`;
             }
@@ -180,11 +192,17 @@
 
         socket.on('bankState', state => {
             els.bank.innerText = `$${state.bankedTotal}`;
+            
+            // Render Escalera (PUNTO 4: El CSS se encarga de invertir el orden visual)
             els.ladder.innerHTML = '';
-            [...state.chain].reverse().forEach((val, idx) => {
-                const realIdx = state.chain.length - 1 - idx;
+            // Iteramos normal: 0 es el más bajo ($1), último es el más alto ($100)
+            state.chain.forEach((val, idx) => {
                 const div = document.createElement('div');
-                div.className = `step ${realIdx === state.chainIndex ? 'active' : ''} ${realIdx < state.chainIndex ? 'passed' : ''}`;
+                // idx == chainIndex es el activo
+                div.className = `step ${idx === state.chainIndex ? 'active' : ''}`;
+                // Estilo para los que ya pasaron (menores al indice actual)
+                if (idx < state.chainIndex) div.style.opacity = '0.3';
+                
                 div.innerText = `$${val}`;
                 els.ladder.appendChild(div);
             });
