@@ -7,43 +7,63 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050505; --primary: #00d2ff; --accent: #f1c40f; --danger: #ff0055; --success: #00ff9d; --glass: rgba(255,255,255,0.08); }
+        
+        * { box-sizing: border-box; }
+        
         body { margin:0; padding:10px; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:grid; grid-template-rows: auto 1fr; gap:10px; overflow:hidden; }
         
-        header { display:flex; justify-content:space-between; align-items:center; background:var(--glass); padding:10px 20px; border-radius:12px; }
+        header { display:flex; justify-content:space-between; align-items:center; background:var(--glass); padding:10px 20px; border-radius:12px; height: 70px; }
         .brand { font-weight:900; font-size:1.2rem; color:var(--primary); text-transform:uppercase; letter-spacing:1px; }
         .timer-box { font-size:2.5rem; font-weight:700; color:var(--primary); }
         .bank-box { text-align:right; } .bank-val { font-size:1.8rem; color:var(--accent); font-weight:bold; }
 
-        .main-grid { display:grid; grid-template-columns: 250px 1fr 250px; gap:10px; height:100%; overflow:hidden; }
+        .main-grid { display:grid; grid-template-columns: 250px 1fr 250px; gap:10px; height: calc(100vh - 100px); overflow:hidden; }
         .panel { background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; display:flex; flex-direction:column; gap:10px; }
         
-        .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); transition:0.2s; text-align:left; }
+        /* Botones laterales */
+        .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); transition:0.2s; text-align:left; font-size: 0.9rem; }
         .btn:hover { background:rgba(255,255,255,0.2); }
         .btn.active { background:var(--primary); color:black; }
         .btn-danger { color:var(--danger); border:1px solid var(--danger); }
-        .btn-danger:hover { background:var(--danger); color:white; }
-
-        /* Centro */
-        .center-panel { justify-content: space-between; }
-        .question-area { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:20px; border-left:4px solid var(--primary); background:rgba(0,0,0,0.3); border-radius:8px; margin-bottom:10px; overflow-y:auto; }
-        .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; }
-        .a-text { font-size:1.4rem; color:var(--success); margin-top:15px; background:rgba(0,255,157,0.1); padding:5px 15px; border-radius:20px; }
         
-        .controls-area { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:80px; }
-        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.2rem; cursor:pointer; text-transform:uppercase; }
-        .b-wrong { background:var(--danger); color:white; }
+        /* CENTRO (Corrección de botones invisibles) */
+        .center-panel { position: relative; padding-bottom: 90px; } /* Espacio para botones */
+        
+        .question-area { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            background: rgba(0,0,0,0.3); 
+            border-left: 4px solid var(--primary); 
+            border-radius: 8px; 
+            margin-bottom: 10px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; margin-bottom: 20px; }
+        .a-text { font-size:1.5rem; color:var(--success); background:rgba(0,255,157,0.1); padding:5px 20px; border-radius:20px; }
+        
+        /* Botones de Acción (Fijos abajo) */
+        .controls-area { 
+            position: absolute; bottom: 15px; left: 15px; right: 15px;
+            display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:70px; 
+        }
+        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.1rem; cursor:pointer; text-transform:uppercase; color: white; }
+        .b-wrong { background:var(--danger); }
         .b-bank { background:var(--accent); color:black; }
         .b-correct { background:var(--success); color:black; }
+        .big-btn:active { transform: scale(0.95); opacity: 0.8; }
 
-        select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; margin-bottom:5px; }
-        
-        /* Stats small */
+        /* Derecha */
+        select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; }
         .stat-row { display:flex; justify-content:space-between; font-size:0.9rem; border-bottom:1px solid #333; padding:5px 0; }
+        
+        /* Botón Reset Visible */
+        .btn-reset { margin-top: auto; background: #300; border: 1px solid #500; color: #f88; text-align: center; }
     </style>
 </head>
 <body>
     <header>
-        <div class="brand">EL RIVAL MÁS DÉBIL<br><span style="font-size:0.8rem; color:#888;">HOST CONTROL</span></div>
+        <div class="brand">EL RIVAL MÁS DÉBIL<br><span style="font-size:0.8rem; color:#888;">PANEL DE CONTROL</span></div>
         <div class="timer-box">⏱ <span id="timerDisplay">20</span></div>
         <div class="bank-box"><div style="font-size:0.7rem; color:#888;">BANCO</div><div id="bankDisplay" class="bank-val">$0</div></div>
     </header>
@@ -56,13 +76,14 @@
             <button class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
             <button class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
             
-            <div style="margin-top:auto">
+            <div style="margin-top: 20px;">
                 <small style="color:#888">RONDA</small>
                 <div id="roundDisplay" style="font-size:1.5rem; font-weight:bold">1</div>
                 <small style="color:#888">TURNO ACTUAL</small>
                 <div id="turnDisplay" style="font-size:1.3rem; color:var(--primary); font-weight:bold;">--</div>
             </div>
-            <button class="btn" onclick="socket.emit('resetGame')" style="margin-top:10px; background:#333;">🔄 RESET GAME</button>
+
+            <button class="btn btn-reset" onclick="resetGame()">🔄 RESET TOTAL</button>
         </div>
 
         <div class="panel center-panel">
@@ -70,6 +91,7 @@
                 <div id="questionText" class="q-text">Esperando inicio...</div>
                 <div id="answerText" class="a-text">Respuesta</div>
             </div>
+            
             <div class="controls-area">
                 <button class="big-btn b-wrong" onclick="socket.emit('wrongAnswer')">✖ MAL</button>
                 <button class="big-btn b-bank" onclick="socket.emit('bank')">💰 BANCA</button>
@@ -80,10 +102,10 @@
         <div class="panel">
             <small style="color:#888">ELIMINAR JUGADOR</small>
             <select id="eliminationSelect"><option value="">Selecciona...</option></select>
-            <button class="btn btn-danger" style="text-align:center" onclick="eliminate()">ELIMINAR SELECCIONADO</button>
+            <button class="btn btn-danger" style="text-align:center; margin-top:5px;" onclick="eliminate()">ELIMINAR</button>
             
             <hr style="border:0; border-top:1px solid #333; width:100%">
-            <small style="color:#888">RANKING EN VIVO</small>
+            <small style="color:#888">RANKING</small>
             <div id="rankingList" style="overflow-y:auto; flex:1;"></div>
         </div>
     </div>
@@ -91,8 +113,6 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        
-        // ELEMENTOS
         const els = {
             timer: document.getElementById('timerDisplay'),
             bank: document.getElementById('bankDisplay'),
@@ -109,22 +129,21 @@
             const val = els.elSelect.value;
             if(val && confirm(`¿Eliminar a ${val}?`)) socket.emit('eliminatePlayer', val);
         }
+        function resetGame() {
+            if(confirm("⚠ ¿ESTÁS SEGURO? Esto borrará a todos los jugadores y reiniciará el juego a cero.")) {
+                socket.emit('resetGame');
+            }
+        }
 
-        // SOCKETS
         socket.on('timerUpdate', t => els.timer.innerText = t);
         socket.on('bankState', s => els.bank.innerText = `$${s.bankedTotal}`);
-        socket.on('questionUpdate', q => {
-            if(q) { els.qText.innerText = q.question; els.aText.innerText = q.answer; }
-        });
+        socket.on('questionUpdate', q => { if(q) { els.qText.innerText = q.question; els.aText.innerText = q.answer; } });
         socket.on('turnUpdate', p => els.turn.innerText = p || "--");
         socket.on('roundUpdate', r => els.round.innerText = r);
         
         socket.on('playersUpdated', players => {
-            // Actualizar Select de Eliminación
             els.elSelect.innerHTML = '<option value="">Selecciona...</option>';
-            players.forEach(p => {
-                els.elSelect.innerHTML += `<option value="${p}">${p}</option>`;
-            });
+            players.forEach(p => els.elSelect.innerHTML += `<option value="${p}">${p}</option>`);
         });
 
         socket.on('rankingUpdate', list => {
@@ -132,14 +151,11 @@
             els.rank.innerHTML = list.map(p => `
                 <div class="stat-row">
                     <span style="font-weight:bold; color:var(--primary)">${p.name}</span>
-                    <span>✔${p.correct} <span style="color:#555">|</span> ✖${p.wrong}</span>
-                </div>
-            `).join('');
+                    <span>✔${p.correct} <span style="color:#555">|</span> $${p.bankAmount}</span>
+                </div>`).join('');
         });
 
-        socket.on('gameReset', () => {
-            location.reload();
-        });
+        socket.on('gameReset', () => location.reload());
     </script>
 </body>
 </html>
