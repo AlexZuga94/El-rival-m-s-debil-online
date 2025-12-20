@@ -90,7 +90,6 @@ const checkVotingResults = () => {
     const activeVoters = gameState.players.length;
     const votesCast = gameState.detailedVotes.length;
 
-    // Solo checar si hay votantes activos
     if (activeVoters > 0 && votesCast >= activeVoters) {
         let counts = {};
         gameState.detailedVotes.forEach(v => { counts[v.target] = (counts[v.target] || 0) + 1; });
@@ -150,17 +149,20 @@ io.on("connection", (socket) => {
         gameState.phase = phase;
         
         if (phase === "questions") {
+            // CORRECCIÓN PUNTO 1: Forzar reinicio de escalera al iniciar ronda de preguntas
+            gameState.bank.chainIndex = -1;
+            gameState.bank.currentValue = 0;
+            
             io.emit("questionUpdate", questionsList[gameState.questionIndex]);
             startTimer();
-        } else if (phase === "voting") {
+        } 
+        else if (phase === "voting") {
             clearInterval(timerInterval);
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             
-            // Limpiar votos para la nueva votación
             gameState.votes = {};
             gameState.detailedVotes = [];
-            
             io.emit("votesUpdated", { summary: {}, details: [] });
             io.emit("votingResult", null);
         } else {
@@ -226,7 +228,6 @@ io.on("connection", (socket) => {
 
     socket.on("vote", (target) => {
         const voterName = playerSockets[socket.id];
-        // Validar que el votante siga en el juego
         if (voterName && gameState.players.includes(voterName)) {
             const alreadyVoted = gameState.detailedVotes.find(v => v.voter === voterName);
             if (alreadyVoted) return;
@@ -244,8 +245,6 @@ io.on("connection", (socket) => {
         gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
         if (gameState.turnIndex >= gameState.turnOrder.length) gameState.turnIndex = 0;
         
-        // --- PUNTO 4: CORRECCIÓN DE FLUJO ---
-        // Limpiar votos inmediatamente para que no afecten la siguiente ronda
         gameState.votes = {};
         gameState.detailedVotes = [];
         
@@ -257,7 +256,6 @@ io.on("connection", (socket) => {
         } else {
              gameState.round++;
              gameState.phase = "waiting"; 
-             // Al cambiar a waiting, el Host deberá dar click en "Preguntas" para iniciar la siguiente ronda
              broadcastState();
         }
     });
