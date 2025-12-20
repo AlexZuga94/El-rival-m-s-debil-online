@@ -41,11 +41,9 @@
         input { width:100%; padding:15px; background:#222; border:none; color:white; font-size:1.2rem; text-align:center; border-radius:10px; margin-bottom:15px; }
         .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; }
 
-        /* INTRO CORREGIDA */
         #introScreen { background: black; text-align:center; padding:20px; }
         .intro-text-1 { font-size:2rem; font-weight:300; animation: fadeIn 1s forwards; opacity:0; }
         .intro-text-2 { font-size:1.5rem; margin-top:10px; color:#888; animation: fadeIn 1s forwards 1s; opacity:0; }
-        /* Se usa introReveal para asegurar que aparezca */
         .intro-logo { font-size:3rem; font-weight:900; margin-top:20px; color:var(--primary); text-transform:uppercase; text-shadow:0 0 20px var(--primary); animation: introReveal 1.5s forwards 2s; opacity:0; transform:scale(0.5); }
 
         .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
@@ -71,20 +69,16 @@
         .oval.wrong { background: var(--danger); box-shadow: 0 0 10px var(--danger); border-color: var(--danger); }
         .oval.current { border-color: var(--accent); animation: pulse 1s infinite; }
 
-        /* PANTALLA GANADOR */
         #winnerScreen { background: radial-gradient(circle at center, #222 0%, #000 100%); z-index: 3000; }
         .w-trophy { font-size: 6rem; animation: bounce 2s infinite; text-shadow: 0 0 50px gold; }
         .w-title { font-size: 1.5rem; color: #888; text-transform: uppercase; margin-top: 20px; }
-        /* Usamos winnerPulse para el ganador */
         .w-name { font-size: 3.5rem; color: var(--primary); font-weight: 900; text-transform: uppercase; line-height: 1.1; margin: 10px 0; text-shadow: 0 0 20px var(--primary); animation: winnerPulse 2s infinite alternate; }
         .w-msg { font-size: 1.2rem; color: white; margin-bottom: 20px; }
         .w-amount { font-size: 4rem; color: var(--accent); font-weight: 900; text-shadow: 0 0 30px var(--accent); }
         
-        /* PANTALLA PERDEDOR FINAL */
         #loserFinalScreen { background: rgba(0,0,0,0.98); z-index: 3000; }
         .l-msg { font-size: 1.5rem; color: white; line-height: 1.5; max-width: 80%; }
         
-        /* PANTALLA INTRODUCCIÓN FINAL */
         #introFinalScreen { background: rgba(0,0,0,0.95); z-index: 2500; }
         .if-title { font-size: 1.5rem; color: var(--accent); margin-bottom: 30px; letter-spacing: 5px; }
         .if-vs { font-size: 4rem; font-weight: 900; color: var(--danger); margin: 20px 0; font-style: italic; }
@@ -96,7 +90,6 @@
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes pulse { 0%{opacity:0.8} 50%{opacity:1} 100%{opacity:0.8} }
         
-        /* ANIMACIONES ESPECÍFICAS CORREGIDAS */
         @keyframes introReveal { 
             to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } 
         }
@@ -251,7 +244,6 @@
         }
 
         function renderPhase(phase) {
-            // Ocultar overlays temporales
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
             els.introFinal.style.display = 'none';
@@ -310,19 +302,17 @@
 
         socket.on('finalWinner', data => {
             if (myName.toUpperCase() === data.name.toUpperCase()) {
-                // SOY EL GANADOR
                 els.winner.style.display = 'flex';
                 els.wName.innerText = data.name;
                 els.wAmount.innerText = `$${data.amount}`;
                 createConfetti();
             } 
             else if (els.penalty.classList.contains('active') && !isEliminated) {
-                // SOY EL PERDEDOR DE LA FINAL (Estaba en fase de penales y no soy el ganador)
                 els.loserFinal.style.display = 'flex';
-                els.lMsg.innerHTML = `${myName},<br>GRACIAS POR PARTICIPAR.<br>PERO HAS SIDO ELIMINADO DE<br><span style="color:var(--primary); font-weight:bold;">EL RIVAL MÁS DÉBIL</span>`;
+                // MENSAJE CORREGIDO PARA PERDEDOR
+                els.lMsg.innerHTML = `${myName},<br>GRACIAS POR PARTICIPAR.<br>PERO HAS PERDIDO EN LA FINAL DE<br><span style="color:var(--primary); font-weight:bold;">EL RIVAL MÁS DÉBIL</span>`;
             } 
             else {
-                // SOY ESPECTADOR (Ya estaba eliminado antes)
                 els.winner.style.display = 'flex';
                 els.wName.innerText = data.name;
                 els.wAmount.innerText = `$${data.amount}`;
@@ -398,7 +388,6 @@
         });
 
         socket.on('finalState', final => {
-            // Llenar datos de introducción
             els.ifP1.innerText = final.p1.name;
             els.ifP2.innerText = final.p2.name;
 
