@@ -7,100 +7,54 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #050505; --primary: #00d2ff; --accent: #f1c40f; --danger: #ff0055; --success: #00ff9d; --glass: rgba(255,255,255,0.08); }
-        
         * { box-sizing: border-box; }
+        body { margin:0; padding:10px; background:var(--bg); color:white; font-family:'Outfit'; height: 100dvh; width: 100vw; display:flex; flex-direction: column; gap:10px; overflow:hidden; }
         
-        body { 
-            margin:0; padding:10px; background:var(--bg); color:white; font-family:'Outfit'; 
-            /* TRUCO PARA TABLET: Usar dvh (Dynamic Viewport Height) */
-            height: 100dvh; 
-            width: 100vw;
-            display:flex; 
-            flex-direction: column;
-            gap:10px; 
-            overflow:hidden; 
-        }
-        
-        /* HEADER FIJO */
-        header { 
-            flex-shrink: 0; /* No encoger */
-            display:flex; justify-content:space-between; align-items:center; 
-            background:var(--glass); padding:0 20px; border-radius:12px; height: 70px; 
-        }
-        .brand { font-weight:900; font-size:1.2rem; color:var(--primary); text-transform:uppercase; letter-spacing:1px; }
+        header { flex-shrink: 0; display:flex; justify-content:space-between; align-items:center; background:var(--glass); padding:0 20px; border-radius:12px; height: 70px; }
+        .brand { font-weight:900; font-size:1.2rem; color:var(--primary); text-transform:uppercase; }
         .timer-box { font-size:2.5rem; font-weight:700; color:var(--primary); }
         .bank-box { text-align:right; } .bank-val { font-size:1.8rem; color:var(--accent); font-weight:bold; }
 
-        /* GRID PRINCIPAL QUE OCUPA EL RESTO DEL ESPACIO */
-        .main-grid { 
-            flex: 1; /* Ocupa todo el espacio sobrante debajo del header */
-            display:grid; grid-template-columns: 250px 1fr 250px; gap:10px; 
-            min-height: 0; /* Vital para que el scroll interno funcione */
-        }
-
-        .panel { 
-            background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; 
-            display:flex; flex-direction:column; gap:10px; 
-            height: 100%; /* Llenar la altura de la grilla */
-            overflow: hidden;
-        }
+        .main-grid { flex: 1; display:grid; grid-template-columns: 250px 1fr 250px; gap:10px; min-height: 0; }
+        .panel { background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; display:flex; flex-direction:column; gap:10px; height: 100%; overflow: hidden; }
         
-        /* BOTONES LATERALES */
-        .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); transition:0.2s; text-align:left; font-size: 0.9rem; }
-        .btn:hover { background:rgba(255,255,255,0.2); }
+        .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); text-align:left; font-size: 0.9rem; }
         .btn.active { background:var(--primary); color:black; }
         .btn-danger { color:var(--danger); border:1px solid var(--danger); }
-        
-        /* PANEL CENTRAL (FLEXBOX MAGIC) */
-        .center-panel { 
-            display: flex; 
-            flex-direction: column; 
-            padding: 10px;
-        } 
-        
-        .question-area { 
-            flex: 1; /* Ocupa todo el espacio disponible */
-            overflow-y: auto; /* Si la pregunta es muy larga, scrollear */
-            padding: 20px; 
-            background: rgba(0,0,0,0.3); 
-            border-left: 4px solid var(--primary); 
-            border-radius: 8px; 
-            margin-bottom: 10px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-        }
-        .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; margin-bottom: 20px; }
-        .a-text { font-size:1.5rem; color:var(--success); background:rgba(0,255,157,0.1); padding:5px 20px; border-radius:20px; }
-        
-        /* BOTONES DE CONTROL (FIJOS ABAJO) */
-        .controls-area { 
-            flex-shrink: 0; /* Nunca hacerse más pequeños */
-            display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:80px; 
-        }
-        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.2rem; cursor:pointer; text-transform:uppercase; color: white; }
-        .b-wrong { background:var(--danger); }
-        .b-bank { background:var(--accent); color:black; }
-        .b-correct { background:var(--success); color:black; }
-        .big-btn:active { transform: scale(0.95); opacity: 0.8; }
-
-        /* ELEMENTOS DERECHA */
-        select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; flex-shrink: 0; }
-        .stat-row { display:flex; justify-content:space-between; font-size:0.9rem; border-bottom:1px solid #333; padding:5px 0; }
-        
-        /* RESET VISIBLE */
         .btn-reset { margin-top: auto; background: #300; border: 1px solid #500; color: #f88; text-align: center; flex-shrink: 0; }
 
-        /* RESPONSIVE PARA TABLETS VERTICALES O MÓVILES (Por si acaso) */
-        @media (max-width: 900px) {
-            .main-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
-            .panel { height: auto; }
-            .question-area { min-height: 200px; }
-            body { overflow-y: auto; height: auto; }
+        /* CENTER PANEL */
+        .center-panel { display: flex; flex-direction: column; padding: 10px; position: relative; } 
+        
+        /* TURNO AL CENTRO (Punto 1) */
+        .turn-banner { text-align: center; background: rgba(0, 210, 255, 0.1); padding: 5px; border-radius: 5px; border: 1px solid var(--primary); color: var(--primary); font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; }
+
+        .question-area { flex: 1; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.3); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; margin-bottom: 20px; }
+        .a-text { font-size:1.5rem; color:var(--success); background:rgba(0,255,157,0.1); padding:5px 20px; border-radius:20px; }
+
+        /* ESCALERA HOST (Punto 3) */
+        #hostLadder { 
+            display: flex; gap: 5px; justify-content: center; align-items: center; 
+            padding: 5px; background: rgba(0,0,0,0.5); border-radius: 5px; margin-bottom: 10px;
+            overflow-x: auto; white-space: nowrap; flex-shrink: 0;
         }
+        .h-step { padding: 5px 10px; background: #222; border-radius: 4px; font-size: 0.8rem; color: #555; }
+        .h-step.active { background: var(--accent); color: black; font-weight: bold; transform: scale(1.1); }
+
+        .controls-area { flex-shrink: 0; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:80px; }
+        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.1rem; cursor:pointer; text-transform:uppercase; color: white; }
+        .b-wrong { background:var(--danger); }
+        .b-bank { background:var(--accent); color:black; display: flex; flex-direction: column; justify-content: center; align-items: center; line-height: 1; }
+        .b-correct { background:var(--success); color:black; }
+
+        select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; flex-shrink: 0; }
+        .stat-row { display:flex; justify-content:space-between; font-size:0.9rem; border-bottom:1px solid #333; padding:5px 0; }
     </style>
 </head>
 <body>
     <header>
-        <div class="brand">EL RIVAL MÁS DÉBIL<br><span style="font-size:0.8rem; color:#888;">PANEL DE CONTROL</span></div>
+        <div class="brand">HOST CONTROL</div>
         <div class="timer-box">⏱ <span id="timerDisplay">20</span></div>
         <div class="bank-box"><div style="font-size:0.7rem; color:#888;">BANCO</div><div id="bankDisplay" class="bank-val">$0</div></div>
     </header>
@@ -108,39 +62,41 @@
     <div class="main-grid">
         <div class="panel">
             <small style="color:#888">FASES</small>
-            <button class="btn" onclick="setPhase('waiting')">⏸ INTRO / ESPERA</button>
+            <button class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
             <button class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
             <button class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
             <button class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
-            
             <div style="margin-top: 20px;">
                 <small style="color:#888">RONDA</small>
                 <div id="roundDisplay" style="font-size:1.5rem; font-weight:bold">1</div>
-                <small style="color:#888">TURNO ACTUAL</small>
-                <div id="turnDisplay" style="font-size:1.3rem; color:var(--primary); font-weight:bold;">--</div>
             </div>
-
             <button class="btn btn-reset" onclick="resetGame()">🔄 RESET TOTAL</button>
         </div>
 
         <div class="panel center-panel">
+            <div id="turnDisplay" class="turn-banner">TURNO DE: --</div>
+
             <div class="question-area">
                 <div id="questionText" class="q-text">Esperando inicio...</div>
                 <div id="answerText" class="a-text">Respuesta</div>
             </div>
             
+            <div id="hostLadder"></div>
+
             <div class="controls-area">
                 <button class="big-btn b-wrong" onclick="socket.emit('wrongAnswer')">✖ MAL</button>
-                <button class="big-btn b-bank" onclick="socket.emit('bank')">💰 BANCA</button>
+                <button id="btnBankHost" class="big-btn b-bank" onclick="socket.emit('bank')">
+                    <span>💰 BANCA</span>
+                    <span id="bankBtnVal" style="font-size: 0.9rem; margin-top: 2px;">$0</span>
+                </button>
                 <button class="big-btn b-correct" onclick="socket.emit('correctAnswer')">✔ BIEN</button>
             </div>
         </div>
 
         <div class="panel">
-            <small style="color:#888">ELIMINAR JUGADOR</small>
+            <small style="color:#888">ELIMINAR</small>
             <select id="eliminationSelect"><option value="">Selecciona...</option></select>
             <button class="btn btn-danger" style="text-align:center; margin-top:5px; flex-shrink:0;" onclick="eliminate()">ELIMINAR</button>
-            
             <hr style="border:0; border-top:1px solid #333; width:100%">
             <small style="color:#888">RANKING</small>
             <div id="rankingList" style="overflow-y:auto; flex:1;"></div>
@@ -158,7 +114,9 @@
             turn: document.getElementById('turnDisplay'),
             round: document.getElementById('roundDisplay'),
             rank: document.getElementById('rankingList'),
-            elSelect: document.getElementById('eliminationSelect')
+            elSelect: document.getElementById('eliminationSelect'),
+            hLadder: document.getElementById('hostLadder'),
+            bankBtnVal: document.getElementById('bankBtnVal')
         };
 
         function setPhase(p) { socket.emit('setPhase', p); }
@@ -166,16 +124,30 @@
             const val = els.elSelect.value;
             if(val && confirm(`¿Eliminar a ${val}?`)) socket.emit('eliminatePlayer', val);
         }
-        function resetGame() {
-            if(confirm("⚠ ¿ESTÁS SEGURO? Esto borrará todo.")) {
-                socket.emit('resetGame');
-            }
-        }
+        function resetGame() { if(confirm("⚠ REINICIAR TODO?")) socket.emit('resetGame'); }
 
         socket.on('timerUpdate', t => els.timer.innerText = t);
-        socket.on('bankState', s => els.bank.innerText = `$${s.bankedTotal}`);
-        socket.on('questionUpdate', q => { if(q) { els.qText.innerText = q.question; els.aText.innerText = q.answer; } });
-        socket.on('turnUpdate', p => els.turn.innerText = p || "--");
+        socket.on('bankState', s => {
+            els.bank.innerText = `$${s.bankedTotal}`;
+            // Actualizar Texto del Botón (Punto 5)
+            els.bankBtnVal.innerText = `$${s.currentChainValue}`;
+            
+            // Dibujar Escalera Host (Punto 3)
+            els.hLadder.innerHTML = '';
+            s.chain.forEach((val, idx) => {
+                const div = document.createElement('div');
+                div.className = `h-step ${idx === s.chainIndex ? 'active' : ''}`;
+                div.innerText = `$${val}`;
+                els.hLadder.appendChild(div);
+            });
+        });
+        
+        socket.on('questionUpdate', q => { 
+            if(q) { els.qText.innerText = q.question; els.aText.innerText = q.answer; } 
+            else { els.qText.innerText = "Esperando pregunta..."; els.aText.innerText = ""; }
+        });
+        
+        socket.on('turnUpdate', p => els.turn.innerText = `TURNO DE: ${p || "--"}`);
         socket.on('roundUpdate', r => els.round.innerText = r);
         
         socket.on('playersUpdated', players => {
@@ -188,7 +160,7 @@
             els.rank.innerHTML = list.map(p => `
                 <div class="stat-row">
                     <span style="font-weight:bold; color:var(--primary)">${p.name}</span>
-                    <span>✔${p.correct} <span style="color:#555">|</span> $${p.bankAmount}</span>
+                    <span>✔${p.correct} | $${p.bankAmount}</span>
                 </div>`).join('');
         });
 
