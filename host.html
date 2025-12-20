@@ -35,6 +35,11 @@
 
         .question-area { flex: 1; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.3); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .voting-area { display: none; flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 10px; }
+        
+        /* NUEVO: MENSAJE PRE-FINAL */
+        .pre-final-msg { display:none; flex: 1; flex-direction:column; justify-content: center; align-items: center; text-align: center; }
+        .pf-text { font-size: 2.5rem; font-weight: 900; color: var(--accent); text-transform: uppercase; animation: pulse 2s infinite; }
+
         .vote-card { background: #222; margin-bottom: 5px; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; font-size: 1.1rem; }
         .voter-name { color: #888; font-size: 0.9rem; }
         .target-name { color: var(--danger); font-weight: bold; }
@@ -58,7 +63,6 @@
         .b-bank { background:var(--accent); color:black; display: flex; flex-direction: column; justify-content: center; align-items: center; line-height: 1; }
         .b-correct { background:var(--success); color:black; }
 
-        /* OVALOS ESTILO HOST */
         .host-penalties { display:none; flex-direction: column; width: 100%; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-top: 10px; }
         .p-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
         .p-name { width: 60px; text-align: right; font-weight: bold; font-size: 0.9rem; color: var(--primary); }
@@ -80,6 +84,8 @@
         .row-strongest .col-name::after { content: ' ★'; }
         .row-weakest { color: var(--danger); }
         .row-weakest .col-name::after { content: ' ▼'; }
+
+        @keyframes pulse { 0%{opacity:0.6} 50%{opacity:1} 100%{opacity:0.6} }
     </style>
 </head>
 <body>
@@ -120,9 +126,16 @@
             <div id="questionArea" class="question-area">
                 <div id="questionText" class="q-text">Esperando inicio...</div>
                 <div id="answerText" class="a-text">Respuesta</div>
-                <div id="winnerBanner" style="display:none; color:var(--accent); font-size:2rem; font-weight:900; margin-top:20px;">
-                    🏆 GANADOR: <span id="winnerName">--</span>
+                
+                <div id="winnerBanner" style="display:none; text-align:center; margin-top:20px;">
+                    <div style="color:var(--accent); font-size:1.5rem; font-weight:900;">🏆 GANADOR</div>
+                    <div id="winnerName" style="color:white; font-size:2.5rem; font-weight:bold; line-height:1.1">--</div>
+                    <div id="winnerAmount" style="color:var(--success); font-size:2rem; font-weight:bold;">$0</div>
                 </div>
+            </div>
+
+            <div id="preFinalArea" class="pre-final-msg">
+                <div class="pf-text">ES MOMENTO<br>DE LA FINAL</div>
             </div>
 
             <div id="hostPenalties" class="host-penalties">
@@ -175,6 +188,8 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+        let activePlayersCount = 0; // NUEVO: Para saber cuándo mostrar mensaje final
+
         const els = {
             timer: document.getElementById('timerDisplay'),
             bankTotal: document.getElementById('bankTotalDisplay'),
@@ -189,6 +204,7 @@
             bankBtnVal: document.getElementById('bankBtnVal'),
             qArea: document.getElementById('questionArea'),
             vArea: document.getElementById('votingResultsArea'),
+            preFinal: document.getElementById('preFinalArea'), // NUEVO
             vList: document.getElementById('votesList'),
             alertElim: document.getElementById('alertElim'),
             alertTie: document.getElementById('alertTie'),
@@ -203,8 +219,8 @@
             btnBankOnly: document.getElementById('btnBank'),
             winnerBanner: document.getElementById('winnerBanner'),
             winnerName: document.getElementById('winnerName'),
+            winnerAmount: document.getElementById('winnerAmount'),
             
-            // Host Ovals
             hostPens: document.getElementById('hostPenalties'),
             p1Name: document.getElementById('penP1Name'),
             p1Ovals: document.getElementById('penP1Ovals'),
@@ -223,18 +239,29 @@
         
         socket.on('phaseChanged', phase => {
             els.winnerBanner.style.display = 'none'; 
+            els.preFinal.style.display = 'none'; // Ocultar por defecto
+
             [els.btnWait, els.btnQ, els.btnVote, els.btnElim, els.btnPen].forEach(b => {
                 b.classList.remove('active', 'btn-next-step');
                 b.disabled = false;
             });
             
-            // Mostrar Ovals solo en penalty
             if (phase === 'penalty') els.hostPens.style.display = 'flex';
             else els.hostPens.style.display = 'none';
 
+            // GESTIÓN DE PANTALLAS CENTRALES
             if(phase === 'voting' || phase === 'times_up') {
                 els.qArea.style.display = 'none';
-                els.vArea.style.display = 'block';
+                
+                // LÓGICA ESPECIAL PARA EL FINAL DE LA RONDA DE 2 JUGADORES
+                if (activePlayersCount === 2) {
+                    els.vArea.style.display = 'none'; // No mostrar votación
+                    els.preFinal.style.display = 'flex'; // MOSTRAR MENSAJE FINAL
+                } else {
+                    els.vArea.style.display = 'block'; // Mostrar votación normal
+                    els.preFinal.style.display = 'none';
+                }
+
             } else {
                 els.qArea.style.display = 'flex';
                 els.vArea.style.display = 'none';
@@ -242,6 +269,7 @@
                 els.alertTie.style.display = 'none';
             }
 
+            // ESTADOS DE BOTONES
             if (phase === 'waiting') {
                 els.btnWait.classList.add('active');
                 els.btnQ.classList.add('btn-next-step');
@@ -280,8 +308,11 @@
         });
 
         socket.on('finalWinner', data => {
+            // MOSTRAR BANNER GANADOR EN HOST
             els.winnerBanner.style.display = 'block';
             els.winnerName.innerText = data.name; 
+            els.winnerAmount.innerText = `$${data.amount}`;
+            
             els.gameBtns.forEach(b => b.disabled = true);
         });
 
@@ -308,6 +339,8 @@
         socket.on('roundUpdate', r => els.round.innerText = r);
         
         socket.on('playersUpdated', players => {
+            activePlayersCount = players.length; // Guardar conteo global
+            
             els.elSelect.innerHTML = '<option value="">Selecciona...</option>';
             players.forEach(p => els.elSelect.innerHTML += `<option value="${p}">${p}</option>`);
 
