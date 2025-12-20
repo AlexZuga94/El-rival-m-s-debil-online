@@ -35,7 +35,6 @@ let gameState = {
     round: 1,
     phase: "waiting", 
     timer: ROUND_TIME_BASE,
-    // PUNTO 1: Agregamos 'roundTotal'
     bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
     questionIndex: 0,
     stats: {}, 
@@ -48,7 +47,7 @@ let timerInterval = null;
 let playerSockets = {}; 
 
 const getCurrentPlayer = () => {
-    if (gameState.phase === 'penalty') {
+    if (gameState.phase === 'penalty' || gameState.phase === 'final_intro') {
         return gameState.final.turn === 0 ? gameState.final.p1.name : gameState.final.p2.name;
     }
     return gameState.turnOrder[gameState.turnIndex % gameState.turnOrder.length] || "Nadie";
@@ -78,7 +77,7 @@ const broadcastState = () => {
         chainIndex: gameState.bank.chainIndex, 
         currentChainValue: gameState.bank.currentValue, 
         bankedTotal: gameState.bank.total,
-        bankedRound: gameState.bank.roundTotal // Enviamos el de la ronda
+        bankedRound: gameState.bank.roundTotal 
     });
     io.emit("turnUpdate", getCurrentPlayer());
     updateRanking();
@@ -153,7 +152,6 @@ function checkPenaltyWinner() {
     }
 
     if (gameState.final.winner) {
-        // PUNTO 3: Enviar nombre Y monto total
         io.emit("finalWinner", { 
             name: gameState.final.winner, 
             amount: gameState.bank.total 
@@ -187,7 +185,6 @@ io.on("connection", (socket) => {
         gameState = {
             players: [], turnOrder: [], turnIndex: 0, round: 1, phase: "waiting",
             timer: ROUND_TIME_BASE,
-            // Resetear también roundTotal
             bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
             questionIndex: 0, stats: {}, votes: {}, detailedVotes: [],
             final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
@@ -208,8 +205,16 @@ io.on("connection", (socket) => {
             gameState.final.turn = 0; 
             gameState.final.winner = null;
             gameState.final.suddenDeath = false;
-            gameState.phase = "penalty";
+            
+            // --- CAMBIO: FASE INTRODUCCIÓN ÉPICA ---
+            gameState.phase = "final_intro";
             broadcastState();
+            
+            // Transición automática a los 4 segundos
+            setTimeout(() => {
+                gameState.phase = "penalty";
+                broadcastState();
+            }, 4000);
             return;
         }
 
@@ -218,9 +223,7 @@ io.on("connection", (socket) => {
         if (phase === "questions") {
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
-            // Reiniciar banco de ronda al empezar preguntas
             gameState.bank.roundTotal = 0;
-            
             io.emit("questionUpdate", questionsList[gameState.questionIndex]);
             startTimer();
         } 
@@ -259,7 +262,6 @@ io.on("connection", (socket) => {
 
         if (gameState.bank.chainIndex === maxIndex) {
             const maxVal = CHAIN_VALUES[maxIndex]; 
-            // Sumar a Total y a Ronda
             gameState.bank.total += maxVal;
             gameState.bank.roundTotal += maxVal;
             
