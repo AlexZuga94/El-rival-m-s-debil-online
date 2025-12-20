@@ -57,16 +57,14 @@ const getStrongestPlayerName = () => {
 };
 
 const broadcastState = () => {
-    // Emitir estado del banco explícitamente cada vez que algo cambia
+    io.emit("phaseChanged", gameState.phase);
+    io.emit("roundUpdate", gameState.round);
     io.emit("bankState", { 
         chain: CHAIN_VALUES, 
         chainIndex: gameState.bank.chainIndex, 
         currentChainValue: gameState.bank.currentValue, 
         bankedTotal: gameState.bank.total 
     });
-
-    io.emit("phaseChanged", gameState.phase);
-    io.emit("roundUpdate", gameState.round);
     io.emit("turnUpdate", getCurrentPlayer());
     updateRanking();
     
@@ -110,16 +108,8 @@ const checkVotingResults = () => {
 };
 
 io.on("connection", (socket) => {
-    // Estado inicial forzado
     socket.emit("phaseChanged", gameState.phase);
     socket.emit("playersUpdated", gameState.players);
-    socket.emit("bankState", { 
-        chain: CHAIN_VALUES, 
-        chainIndex: gameState.bank.chainIndex, 
-        currentChainValue: gameState.bank.currentValue, 
-        bankedTotal: gameState.bank.total 
-    });
-    
     if(gameState.phase === "questions") socket.emit("questionUpdate", questionsList[gameState.questionIndex]);
     broadcastState();
 
@@ -161,7 +151,8 @@ io.on("connection", (socket) => {
             startTimer();
         } else if (phase === "voting") {
             clearInterval(timerInterval);
-            // Reset Escalera al entrar a votación
+            
+            // PUNTO 2: Reiniciar escalera al entrar a votación
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             
@@ -181,10 +172,9 @@ io.on("connection", (socket) => {
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].correct++;
         
-        // Lógica Escalera
+        // Auto-Banca al máximo
         const maxIndex = CHAIN_VALUES.length - 1;
         if (gameState.bank.chainIndex === maxIndex - 1) {
-            // Llegó al tope
             const maxVal = CHAIN_VALUES[maxIndex];
             gameState.bank.total += maxVal;
             if (gameState.stats[player]) {
@@ -210,11 +200,8 @@ io.on("connection", (socket) => {
         if (gameState.final.active) { handleFinalAnswer(false); return; }
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].wrong++;
-        
-        // Reset Escalera
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
-        
         gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
         advanceTurn();
         broadcastState();
@@ -284,7 +271,7 @@ function startTimer() {
         io.emit("timerUpdate", gameState.timer);
         if (gameState.timer <= 0) {
             clearInterval(timerInterval);
-            gameState.phase = "times_up"; // FASE CLAVE PARA ACTIVAR BOTÓN VOTAR
+            gameState.phase = "times_up"; 
             broadcastState();
         }
     }, 1000);
