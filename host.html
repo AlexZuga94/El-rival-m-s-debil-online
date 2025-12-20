@@ -237,7 +237,12 @@
         }
         function resetGame() { if(confirm("⚠ REINICIAR TODO?")) socket.emit('resetGame'); }
 
-        socket.on('timerUpdate', t => els.timer.innerText = t);
+        socket.on('timerUpdate', t => {
+    const minutes = Math.floor(t / 60);
+    const seconds = t % 60;
+    // El string.padStart(2, '0') sirve para que el "9" se vea como "09"
+    els.timer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+});
         
         socket.on('phaseChanged', phase => {
             els.winnerBanner.style.display = 'none'; 
@@ -434,3 +439,4 @@
     </script>
 </body>
 </html>
+
