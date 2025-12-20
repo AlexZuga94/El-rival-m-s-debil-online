@@ -10,10 +10,14 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        header { padding:15px; text-align:center; border-bottom:1px solid #333; background:#0a0a0a; z-index:10; }
+        header { padding:15px; text-align:center; border-bottom:1px solid #333; background:#0a0a0a; z-index:10; position: relative; }
         .app-title { font-weight:900; font-size:1.8rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1; }
         .app-subtitle { font-size: 0.9rem; color: #888; margin-top: 5px; font-weight: 300; }
-        .highlight-name { color: var(--accent); font-weight: bold; }
+        
+        /* PUNTO 2: TIMER EN HEADER */
+        .header-timer { position: absolute; top: 15px; right: 15px; font-size: 1.5rem; font-weight: bold; color: white; }
+        .timer-warn { color: var(--accent); }
+        .timer-crit { color: var(--danger); animation: pulse 0.5s infinite; }
 
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
@@ -29,12 +33,16 @@
 
         #gameScreen { padding-top:90px; justify-content: flex-start; }
         
-        /* PUNTO 4: ESCALERA INVERTIDA (column-reverse hace que el 1er elemento HTML esté abajo) */
         #ladderContainer { 
             flex:1; display:flex; flex-direction: column-reverse; 
             justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; 
         }
-        .step { width:90%; padding:10px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; }
+        
+        /* PUNTO 1: FLEXBOX PARA CENTRAR TEXTO EN BOTÓN ACTIVO */
+        .step { 
+            width:90%; padding:10px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; 
+            display: flex; justify-content: center; align-items: center; /* Centrado absoluto */
+        }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
 
         .bank-info { position:absolute; bottom:0; width:100%; background:#111; padding:20px; text-align:center; border-top:1px solid #333; }
@@ -47,7 +55,6 @@
         .vote-btn { padding:20px; background:#222; border:1px solid #444; color:white; font-weight:bold; font-size:1rem; border-radius:10px; }
         .vote-btn:active { background:var(--primary); color:black; }
 
-        /* PUNTO 2: PANTALLA TIEMPO */
         #timesUpScreen { background: rgba(200, 0, 0, 0.95); }
         .tu-icon { font-size: 5rem; animation: shake 0.5s infinite; }
         
@@ -58,6 +65,7 @@
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes zoomGlow { to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } }
         @keyframes shake { 0%, 100% { transform:translateX(0); } 25% { transform:translateX(-5px); } 75% { transform:translateX(5px); } }
+        @keyframes pulse { 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
     </style>
 </head>
 <body>
@@ -65,6 +73,7 @@
     <header>
         <div class="app-title">EL RIVAL MÁS DÉBIL</div>
         <div id="headerSubTitle" class="app-subtitle">Bienvenido al juego</div>
+        <div id="miniTimer" class="header-timer">20</div>
     </header>
 
     <div id="loginScreen" class="screen active">
@@ -131,7 +140,8 @@
             vGrid: document.getElementById('votingGrid'),
             introName: document.getElementById('intro1'),
             headerSub: document.getElementById('headerSubTitle'),
-            elimMsg: document.getElementById('elimMsg')
+            elimMsg: document.getElementById('elimMsg'),
+            miniTimer: document.getElementById('miniTimer')
         };
 
         function enterGame() {
@@ -139,7 +149,7 @@
             if(!name) return;
             myName = name;
             socket.emit('registerPlayer', name);
-            els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span> estás jugando a El Rival más Débil`;
+            els.headerSub.innerHTML = `<span class=\"highlight-name\">${myName}</span> estás jugando a El Rival más Débil`;
 
             els.login.classList.remove('active');
             els.intro.classList.add('active');
@@ -162,20 +172,24 @@
             }
         });
 
+        socket.on('timerUpdate', t => {
+            els.miniTimer.innerText = t;
+            if(t <= 5) els.miniTimer.className = 'header-timer timer-crit';
+            else if(t <= 10) els.miniTimer.className = 'header-timer timer-warn';
+            else els.miniTimer.className = 'header-timer';
+        });
+
         socket.on('phaseChanged', (phase) => {
-            // Resetear overlays
             els.vote.style.display = 'none';
-            els.timesUp.style.display = 'none'; // Ocultar Time's Up si cambiamos de fase
+            els.timesUp.style.display = 'none';
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
 
             if(phase === 'waiting') {
                 els.waitOver.style.display = 'flex';
                 els.waitMsg.innerText = "Atención al Host...";
             }
-            // PUNTO 2: Mostrar pantalla de TIEMPO
             else if(phase === 'times_up') {
                 els.timesUp.style.display = 'flex';
-                // Vibración
                 if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
             }
             else if(phase === 'voting') {
@@ -193,16 +207,11 @@
         socket.on('bankState', state => {
             els.bank.innerText = `$${state.bankedTotal}`;
             
-            // Render Escalera (PUNTO 4: El CSS se encarga de invertir el orden visual)
             els.ladder.innerHTML = '';
-            // Iteramos normal: 0 es el más bajo ($1), último es el más alto ($100)
             state.chain.forEach((val, idx) => {
                 const div = document.createElement('div');
-                // idx == chainIndex es el activo
                 div.className = `step ${idx === state.chainIndex ? 'active' : ''}`;
-                // Estilo para los que ya pasaron (menores al indice actual)
                 if (idx < state.chainIndex) div.style.opacity = '0.3';
-                
                 div.innerText = `$${val}`;
                 els.ladder.appendChild(div);
             });
