@@ -61,6 +61,13 @@ const getStrongestPlayerName = () => {
 const broadcastState = () => {
     io.emit("phaseChanged", gameState.phase);
     io.emit("roundUpdate", gameState.round);
+    
+    // --- SEGURIDAD: Asegurar que chainIndex sea un número válido antes de enviar ---
+    if (typeof gameState.bank.chainIndex !== 'number' || isNaN(gameState.bank.chainIndex)) {
+        gameState.bank.chainIndex = -1;
+        gameState.bank.currentValue = 0;
+    }
+
     io.emit("bankState", { 
         chain: CHAIN_VALUES, 
         chainIndex: gameState.bank.chainIndex, 
@@ -149,7 +156,7 @@ io.on("connection", (socket) => {
         gameState.phase = phase;
         
         if (phase === "questions") {
-            // CORRECCIÓN PUNTO 1: Forzar reinicio de escalera al iniciar ronda de preguntas
+            // REINICIO FORZADO DE ESCALERA AL INICIAR PREGUNTAS
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             
@@ -177,7 +184,13 @@ io.on("connection", (socket) => {
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].correct++;
         
+        // --- LÓGICA DE ESCALERA BLINDADA ---
+        // Asegurar que chainIndex sea válido
+        if (isNaN(gameState.bank.chainIndex)) gameState.bank.chainIndex = -1;
+
         const maxIndex = CHAIN_VALUES.length - 1;
+        
+        // Si ya estamos en el penúltimo paso y acertamos -> AUTO BANK
         if (gameState.bank.chainIndex === maxIndex - 1) {
             const maxVal = CHAIN_VALUES[maxIndex];
             gameState.bank.total += maxVal;
@@ -185,10 +198,12 @@ io.on("connection", (socket) => {
                 gameState.stats[player].bankAmount += maxVal;
                 gameState.stats[player].bankCount++;
             }
+            // Reset escalera
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             io.emit("bankSuccess");
         } else {
+            // Subir escalera normal
             if (gameState.bank.chainIndex < maxIndex) {
                 gameState.bank.chainIndex++;
                 gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
@@ -204,8 +219,11 @@ io.on("connection", (socket) => {
         if (gameState.final.active) { handleFinalAnswer(false); return; }
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].wrong++;
+        
+        // Reset escalera por error
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
+        
         gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
         advanceTurn();
         broadcastState();
