@@ -21,7 +21,6 @@
         .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); text-align:left; font-size: 0.9rem; transition: all 0.2s; }
         .btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
         
-        /* Highlight para el siguiente paso recomendado */
         .btn-next-step { border: 2px solid var(--primary); background: rgba(0, 210, 255, 0.2); box-shadow: 0 0 10px var(--primary); }
         
         .btn.active { background:var(--primary); color:black; }
@@ -50,7 +49,6 @@
 
         .controls-area { flex-shrink: 0; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:80px; }
         .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.1rem; cursor:pointer; text-transform:uppercase; color: white; transition: 0.2s; }
-        /* PUNTO 6: Botones desactivados */
         .big-btn:disabled { opacity: 0.2; filter: grayscale(100%); pointer-events: none; }
         
         .b-wrong { background:var(--danger); }
@@ -83,7 +81,7 @@
             <small style="color:#888">FASES</small>
             <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
             <button id="btnPhaseQ" class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
-            <button id="btnPhaseVote" class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
+            <button id="btnPhaseVote" class="btn" onclick="setPhase('voting')" disabled>🗳 VOTACIÓN</button>
             <button id="btnPhaseElim" class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
             
             <div style="margin-top: 20px;">
@@ -158,7 +156,6 @@
             alertTie: document.getElementById('alertTie'),
             elimTarget: document.getElementById('elimTarget'),
             tieBreaker: document.getElementById('tieBreaker'),
-            // Control buttons
             btnWait: document.getElementById('btnPhaseWait'),
             btnQ: document.getElementById('btnPhaseQ'),
             btnVote: document.getElementById('btnPhaseVote'),
@@ -176,13 +173,13 @@
         socket.on('timerUpdate', t => els.timer.innerText = t);
         
         socket.on('phaseChanged', phase => {
-            // 1. Limpiar estilos
+            // Limpiar estados previos
             [els.btnWait, els.btnQ, els.btnVote, els.btnElim].forEach(b => {
                 b.classList.remove('active', 'btn-next-step');
                 b.disabled = false;
             });
 
-            // 2. Gestionar Paneles Centrales
+            // Vistas
             if(phase === 'voting' || phase === 'times_up') {
                 els.qArea.style.display = 'none';
                 els.vArea.style.display = 'block';
@@ -193,28 +190,35 @@
                 els.alertTie.style.display = 'none';
             }
 
-            // 3. PUNTO 5 y 6: Lógica de Botones (Semáforo y Bloqueo)
+            // --- LÓGICA DE BOTONES (PUNTO 1: Bloqueo de Voto) ---
             if (phase === 'waiting') {
                 els.btnWait.classList.add('active');
-                els.btnQ.classList.add('btn-next-step'); // Sugerir Preguntas
-                els.gameBtns.forEach(b => b.disabled = true); // Sin juego
+                els.btnQ.classList.add('btn-next-step'); 
+                els.btnVote.disabled = true; // Bloqueado
+                els.gameBtns.forEach(b => b.disabled = true);
             } 
             else if (phase === 'questions') {
                 els.btnQ.classList.add('active');
-                els.btnVote.classList.add('btn-next-step'); // Sugerir Votación
-                els.btnElim.disabled = true; // No eliminar durante preguntas
-                els.gameBtns.forEach(b => b.disabled = false); // Juego Activo
+                els.btnVote.disabled = true; // Bloqueado mientras se juega
+                els.btnElim.disabled = true;
+                els.gameBtns.forEach(b => b.disabled = false);
             } 
-            else if (phase === 'voting' || phase === 'times_up') {
-                els.btnVote.classList.add('active');
-                els.btnElim.classList.add('btn-next-step'); // Sugerir Eliminar
-                els.btnQ.disabled = true; // No volver a preguntas sin eliminar
-                els.gameBtns.forEach(b => b.disabled = true); // Juego Bloqueado
+            else if (phase === 'times_up') {
+                // AQUÍ ES EL MOMENTO MÁGICO: SE ACTIVA EL VOTO
+                els.btnVote.disabled = false; // Desbloqueado
+                els.btnVote.classList.add('btn-next-step'); // Resaltado para que le des clic
+                els.gameBtns.forEach(b => b.disabled = true);
+            }
+            else if (phase === 'voting') {
+                els.btnVote.classList.add('active'); // Ya le diste clic
+                els.btnElim.classList.add('btn-next-step');
+                els.btnQ.disabled = true;
+                els.gameBtns.forEach(b => b.disabled = true);
             } 
             else if (phase === 'elimination') {
                 els.btnElim.classList.add('active');
-                els.btnQ.classList.add('btn-next-step'); // Sugerir Siguiente Ronda
-                els.btnVote.disabled = true;
+                els.btnQ.classList.add('btn-next-step');
+                els.btnVote.disabled = true; // Se vuelve a bloquear
                 els.gameBtns.forEach(b => b.disabled = true);
             }
         });
@@ -222,9 +226,13 @@
         socket.on('bankState', s => {
             els.bank.innerText = `$${s.bankedTotal}`;
             els.bankBtnVal.innerText = `$${s.currentChainValue}`;
+            
+            // PUNTO 2: Renderizado Escalera Host
             els.hLadder.innerHTML = '';
             s.chain.forEach((val, idx) => {
                 const div = document.createElement('div');
+                // idx es la posición en el array (0=$1, 1=$2)
+                // s.chainIndex es dónde vamos
                 div.className = `h-step ${idx === s.chainIndex ? 'active' : ''}`;
                 div.innerText = `$${val}`;
                 els.hLadder.appendChild(div);
@@ -252,7 +260,6 @@
                     if (index === 0) rowClass = "row-strongest";
                     if (index === list.length - 1) rowClass = "row-weakest";
                 }
-                // PUNTO 4: Columna Money
                 return `
                 <div class="stat-row ${rowClass}">
                     <span class="col-name">${p.name}</span>
@@ -281,13 +288,4 @@
             if(res.type === 'clear') {
                 els.alertElim.style.display = 'block';
                 els.elimTarget.innerText = `${res.target} (${res.count} votos)`;
-            } else if (res.type === 'tie') {
-                els.alertTie.style.display = 'block';
-                els.tieBreaker.innerText = res.decisionMaker;
-            }
-        });
-
-        socket.on('gameReset', () => location.reload());
-    </script>
-</body>
-</html>
+            } else if (res.
