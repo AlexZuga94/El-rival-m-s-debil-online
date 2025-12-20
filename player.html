@@ -10,6 +10,7 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
+        /* HEADER FIJO */
         header { 
             position: fixed; top: 0; left: 0; width: 100%; height: 85px;
             display: grid; grid-template-columns: 1fr auto; align-items: center; 
@@ -24,9 +25,11 @@
         .timer-crit { color: var(--danger); animation: pulse 0.5s infinite; }
         .highlight-name { color: var(--accent); font-weight: bold; }
 
+        /* PANTALLAS */
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
 
+        /* JUEGO */
         #gameScreen { padding-top: 90px; justify-content: flex-start; }
         .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; position: relative; z-index: 50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
@@ -36,6 +39,7 @@
         .step { width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; display: flex; justify-content: center; align-items: center; }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
 
+        /* LOGIN & INTRO */
         .login-box { width:80%; text-align:center; }
         input { width:100%; padding:15px; background:#222; border:none; color:white; font-size:1.2rem; text-align:center; border-radius:10px; margin-bottom:15px; }
         .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; }
@@ -45,6 +49,7 @@
         .intro-text-2 { font-size:1.5rem; margin-top:10px; color:#888; animation: fadeIn 1s forwards 1s; opacity:0; }
         .intro-logo { font-size:3rem; font-weight:900; margin-top:20px; color:var(--primary); text-transform:uppercase; text-shadow:0 0 20px var(--primary); animation: zoomGlow 1.5s forwards 2s; opacity:0; transform:scale(0.5); }
 
+        /* OVERLAYS */
         .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
         #votingGrid { display:grid; grid-template-columns:1fr 1fr; gap:15px; width:90%; margin-top:20px; }
@@ -58,7 +63,7 @@
         .elim-icon { font-size:6rem; margin-bottom:20px; color: var(--danger); text-shadow: 0 0 30px var(--danger); }
         .elim-text { font-size:1.8rem; font-weight:bold; color: white; line-height: 1.4; }
 
-        /* --- NUEVO: PANTALLA DE PENALES (OVALOS) --- */
+        /* PANTALLA DE PENALES */
         #penaltyScreen { background: #000; padding-top: 90px; }
         .penalty-container { display: flex; flex-direction: column; width: 100%; height: 100%; justify-content: center; gap: 30px; }
         .p-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -148,16 +153,17 @@
         let isEliminated = false;
         let currentRound = 1;
         let myEliminationRound = null;
+        let isLoggedIn = false;      // <--- CANDADO DE SEGURIDAD
+        let currentPhase = 'waiting'; // Guardar fase actual para usarla después del login
         
         const els = {
             login: document.getElementById('loginScreen'),
             intro: document.getElementById('introScreen'),
             game: document.getElementById('gameScreen'),
-            penalty: document.getElementById('penaltyScreen'), // NUEVO
+            penalty: document.getElementById('penaltyScreen'),
             vote: document.getElementById('voteScreen'),
             timesUp: document.getElementById('timesUpScreen'),
             elim: document.getElementById('eliminatedScreen'),
-            
             ladder: document.getElementById('ladderContainer'),
             bank: document.getElementById('bankTotal'),
             waitOver: document.getElementById('waitingOverlay'),
@@ -167,8 +173,6 @@
             headerSub: document.getElementById('headerSubTitle'),
             miniTimer: document.getElementById('miniTimer'),
             elimMsg: document.getElementById('elimMsg'),
-            
-            // Penales
             p1Name: document.getElementById('penP1Name'),
             p1Ovals: document.getElementById('penP1Ovals'),
             p2Name: document.getElementById('penP2Name'),
@@ -180,16 +184,65 @@
             if(!name) return;
             myName = name;
             socket.emit('registerPlayer', name);
+            
+            // UI Transition
             els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, estás jugando a El Rival más Débil`;
             els.login.classList.remove('active');
             els.intro.classList.add('active');
             els.introName.innerText = `¡Hola ${name}!`;
+            
+            // Activar candado y procesar fase después de la intro
+            isLoggedIn = true;
+            
             setTimeout(() => {
                 els.intro.classList.remove('active');
-                els.game.classList.add('active');
-                els.waitOver.style.display = 'flex';
-                els.waitMsg.innerText = "Esperando al Host...";
+                renderPhase(currentPhase); // Mostrar la pantalla correcta según el estado del juego
             }, 4500);
+        }
+
+        // FUNCIÓN CENTRAL PARA CONTROLAR QUÉ PANTALLA SE VE
+        function renderPhase(phase) {
+            // Limpiar overlays
+            els.vote.style.display = 'none';
+            els.timesUp.style.display = 'none';
+            if(phase !== 'waiting') els.waitOver.style.display = 'none';
+            
+            // Ocultar pantallas base
+            els.game.classList.remove('active');
+            els.penalty.classList.remove('active');
+
+            // Lógica Eliminado
+            if (isEliminated) {
+                 if(phase === 'penalty') els.penalty.classList.add('active');
+                 else els.game.classList.add('active');
+                 
+                 if(phase === 'waiting') {
+                    els.waitOver.style.display = 'flex';
+                    els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
+                 }
+                return; 
+            }
+
+            // Lógica Juego
+            if (phase === 'penalty') {
+                els.penalty.classList.add('active');
+                return;
+            }
+
+            // Default: Ladder Game
+            els.game.classList.add('active');
+
+            if(phase === 'waiting') {
+                els.waitOver.style.display = 'flex';
+                els.waitMsg.innerText = "Atención al Host...";
+            }
+            else if(phase === 'times_up') {
+                els.timesUp.style.display = 'flex';
+                if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
+            }
+            else if(phase === 'voting') {
+                els.vote.style.display = 'flex';
+            }
         }
 
         socket.on('gameReset', () => location.reload());
@@ -202,7 +255,8 @@
                 els.elim.style.display = 'flex';
                 setTimeout(() => {
                     els.elim.style.display = 'none'; 
-                    els.game.classList.add('active'); 
+                    renderPhase(currentPhase); // Refrescar vista
+                    
                     els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, has sido el rival más débil de la ronda ${myEliminationRound}`;
                     els.headerSub.style.color = "var(--danger)";
                     els.waitOver.style.display = 'flex';
@@ -219,45 +273,9 @@
         });
 
         socket.on('phaseChanged', (phase) => {
-            els.vote.style.display = 'none';
-            els.timesUp.style.display = 'none';
-            els.game.classList.remove('active'); // Ocultar juego normal por defecto
-            els.penalty.classList.remove('active'); // Ocultar penales por defecto
-            
-            if(phase !== 'waiting') els.waitOver.style.display = 'none';
-
-            if (isEliminated) {
-                // Modo espectador simple: siempre ven el juego de fondo (o penales si es el caso)
-                 if(phase === 'penalty') els.penalty.classList.add('active');
-                 else els.game.classList.add('active');
-                 
-                 if(phase === 'waiting') {
-                    els.waitOver.style.display = 'flex';
-                    els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
-                 }
-                return; 
-            }
-
-            if(phase === 'waiting') {
-                els.game.classList.add('active');
-                els.waitOver.style.display = 'flex';
-                els.waitMsg.innerText = "Atención al Host...";
-            }
-            else if(phase === 'questions') {
-                els.game.classList.add('active');
-            }
-            else if(phase === 'times_up') {
-                els.game.classList.add('active');
-                els.timesUp.style.display = 'flex';
-                if(navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 500]);
-            }
-            else if(phase === 'voting') {
-                els.game.classList.add('active');
-                els.vote.style.display = 'flex';
-            }
-            else if(phase === 'penalty') {
-                els.penalty.classList.add('active');
-            }
+            currentPhase = phase; // Guardar siempre
+            if (!isLoggedIn) return; // Si no ha entrado, NO TOCAR UI
+            renderPhase(phase);
         });
 
         socket.on('roundUpdate', r => {
@@ -297,14 +315,12 @@
             });
         });
 
-        // NUEVO: ACTUALIZACIÓN DE PENALES
         socket.on('finalState', final => {
             els.p1Name.innerText = final.p1.name;
             els.p2Name.innerText = final.p2.name;
             
-            // Render Ovals P1
+            // P1 Ovals
             els.p1Ovals.innerHTML = '';
-            // Generar 5 vacíos base, y llenar con historia
             const maxSlots = Math.max(5, final.p1.history.length + 1);
             for(let i=0; i<maxSlots; i++) {
                 const div = document.createElement('div');
@@ -317,7 +333,7 @@
                 els.p1Ovals.appendChild(div);
             }
 
-            // Render Ovals P2
+            // P2 Ovals
             els.p2Ovals.innerHTML = '';
             const maxSlots2 = Math.max(5, final.p2.history.length + 1);
             for(let i=0; i<maxSlots2; i++) {
