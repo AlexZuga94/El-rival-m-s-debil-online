@@ -14,10 +14,12 @@
         .app-title { font-weight:900; font-size:1.8rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1; }
         .app-subtitle { font-size: 0.9rem; color: #888; margin-top: 5px; font-weight: 300; }
         
-        /* PUNTO 2: TIMER EN HEADER */
         .header-timer { position: absolute; top: 15px; right: 15px; font-size: 1.5rem; font-weight: bold; color: white; }
         .timer-warn { color: var(--accent); }
         .timer-crit { color: var(--danger); animation: pulse 0.5s infinite; }
+
+        /* PUNTO 7: Barra de Eliminado (Spectator Mode) */
+        #eliminatedBar { display:none; background: var(--danger); color: white; text-align: center; font-weight: bold; padding: 5px; animation: pulse 2s infinite; }
 
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
@@ -31,23 +33,23 @@
         .intro-text-2 { font-size:1.5rem; margin-top:10px; color:#888; animation: fadeIn 1s forwards 1s; opacity:0; }
         .intro-logo { font-size:3rem; font-weight:900; margin-top:20px; color:var(--primary); text-transform:uppercase; text-shadow:0 0 20px var(--primary); animation: zoomGlow 1.5s forwards 2s; opacity:0; transform:scale(0.5); }
 
-        #gameScreen { padding-top:90px; justify-content: flex-start; }
+        #gameScreen { padding-top:0px; justify-content: flex-start; }
         
+        /* PUNTO 3: Banco Arriba */
+        .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; margin-top: 10px; }
+        .bank-total-label { font-size:0.8rem; color:#888; }
+        .bank-total-val { font-size:2.5rem; color:var(--accent); font-weight:bold; line-height: 1; }
+
         #ladderContainer { 
             flex:1; display:flex; flex-direction: column-reverse; 
             justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; 
         }
         
-        /* PUNTO 1: FLEXBOX PARA CENTRAR TEXTO EN BOTÓN ACTIVO */
         .step { 
             width:90%; padding:10px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; 
-            display: flex; justify-content: center; align-items: center; /* Centrado absoluto */
+            display: flex; justify-content: center; align-items: center; 
         }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
-
-        .bank-info { position:absolute; bottom:0; width:100%; background:#111; padding:20px; text-align:center; border-top:1px solid #333; }
-        .bank-total-label { font-size:0.8rem; color:#888; }
-        .bank-total-val { font-size:2rem; color:var(--accent); font-weight:bold; }
 
         .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:50; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
@@ -58,14 +60,10 @@
         #timesUpScreen { background: rgba(200, 0, 0, 0.95); }
         .tu-icon { font-size: 5rem; animation: shake 0.5s infinite; }
         
-        #eliminatedScreen { background:rgba(0,0,0,0.95); }
-        .elim-icon { font-size:6rem; margin-bottom:20px; color: var(--danger); text-shadow: 0 0 30px var(--danger); }
-        .elim-text { font-size:1.5rem; font-weight:bold; color: white; line-height: 1.5; }
-
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes zoomGlow { to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } }
         @keyframes shake { 0%, 100% { transform:translateX(0); } 25% { transform:translateX(-5px); } 75% { transform:translateX(5px); } }
-        @keyframes pulse { 0%{opacity:0.5} 50%{opacity:1} 100%{opacity:0.5} }
+        @keyframes pulse { 0%{opacity:0.8} 50%{opacity:1} 100%{opacity:0.8} }
     </style>
 </head>
 <body>
@@ -75,6 +73,8 @@
         <div id="headerSubTitle" class="app-subtitle">Bienvenido al juego</div>
         <div id="miniTimer" class="header-timer">20</div>
     </header>
+    
+    <div id="eliminatedBar">⛔ ESTÁS ELIMINADO (Modo Espectador)</div>
 
     <div id="loginScreen" class="screen active">
         <div class="login-box">
@@ -91,11 +91,12 @@
     </div>
 
     <div id="gameScreen" class="screen">
-        <div id="ladderContainer"></div>
         <div class="bank-info">
             <div class="bank-total-label">BANCO ACUMULADO</div>
             <div id="bankTotal" class="bank-total-val">$0</div>
         </div>
+        
+        <div id="ladderContainer"></div>
         
         <div id="waitingOverlay" class="overlay" style="background:rgba(0,0,0,0.8);">
             <div id="roundWaitMsg" style="font-size:1.5rem; color:var(--primary); font-weight:bold;">Esperando inicio...</div>
@@ -113,24 +114,17 @@
         <div id="votingGrid"></div>
     </div>
 
-    <div id="eliminatedScreen" class="overlay">
-        <div class="elim-icon">❌</div>
-        <div id="elimMsg" class="elim-text">Has sido eliminado.</div>
-        <div style="color:#888; margin-top:20px;">Gracias por participar.</div>
-    </div>
-
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let myName = "";
-        let currentRound = 1;
+        let isEliminated = false; // Estado local
         
         const els = {
             login: document.getElementById('loginScreen'),
             intro: document.getElementById('introScreen'),
             game: document.getElementById('gameScreen'),
             vote: document.getElementById('voteScreen'),
-            elim: document.getElementById('eliminatedScreen'),
             timesUp: document.getElementById('timesUpScreen'),
             
             ladder: document.getElementById('ladderContainer'),
@@ -140,8 +134,8 @@
             vGrid: document.getElementById('votingGrid'),
             introName: document.getElementById('intro1'),
             headerSub: document.getElementById('headerSubTitle'),
-            elimMsg: document.getElementById('elimMsg'),
-            miniTimer: document.getElementById('miniTimer')
+            miniTimer: document.getElementById('miniTimer'),
+            elimBar: document.getElementById('eliminatedBar')
         };
 
         function enterGame() {
@@ -167,8 +161,14 @@
 
         socket.on('playerEliminated', (name) => {
             if(name.toUpperCase() === myName.toUpperCase()) {
-                els.elimMsg.innerText = `${myName}, en la ronda ${currentRound} has sido el rival más débil.`;
-                els.elim.style.display = 'flex'; 
+                isEliminated = true;
+                // PUNTO 7: Activar modo espectador
+                els.elimBar.style.display = 'block';
+                // Asegurar que no vea overlays bloqueantes si estamos en juego
+                els.vote.style.display = 'none';
+                els.timesUp.style.display = 'none';
+                els.waitOver.style.display = 'flex';
+                els.waitMsg.innerText = "ELIMINADO - MODO ESPECTADOR";
             }
         });
 
@@ -180,10 +180,22 @@
         });
 
         socket.on('phaseChanged', (phase) => {
+            // Limpieza general de overlays
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
 
+            // PUNTO 7: Si está eliminado, solo ve el juego (escalera/banco)
+            // No entra a votación ni ve Time's Up
+            if (isEliminated) {
+                if (phase === 'waiting') {
+                    els.waitOver.style.display = 'flex';
+                    els.waitMsg.innerText = "ELIMINADO - Esperando siguiente ronda";
+                }
+                return; 
+            }
+
+            // Lógica normal para jugadores vivos
             if(phase === 'waiting') {
                 els.waitOver.style.display = 'flex';
                 els.waitMsg.innerText = "Atención al Host...";
@@ -198,8 +210,7 @@
         });
 
         socket.on('roundUpdate', r => {
-            currentRound = r;
-            if(els.waitMsg.innerText.includes("Esperando") || els.waitMsg.innerText.includes("Atención")) {
+            if(!isEliminated && (els.waitMsg.innerText.includes("Esperando") || els.waitMsg.innerText.includes("Atención"))) {
                 els.waitMsg.innerText = `Esperando comenzar RONDA ${r}`;
             }
         });
@@ -228,7 +239,8 @@
                         socket.emit('vote', p);
                         els.vote.style.display = 'none';
                         els.waitOver.style.display = 'flex';
-                        els.waitMsg.innerText = "Voto Registrado";
+                        // PUNTO 1: Mensaje de confirmación voto
+                        els.waitMsg.innerHTML = `HAS VOTADO POR:<br><span style="color:var(--danger); font-size:2rem">${p}</span>`;
                     };
                     els.vGrid.appendChild(btn);
                 }
