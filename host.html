@@ -14,7 +14,6 @@
         .brand { font-weight:900; font-size:1.2rem; color:var(--primary); text-transform:uppercase; }
         .timer-box { font-size:2.5rem; font-weight:700; color:var(--primary); }
         
-        /* PUNTO 1: Estilo para doble banco */
         .bank-box { text-align:right; display:flex; flex-direction:column; justify-content:center; }
         .bank-row { display:flex; justify-content:flex-end; gap:10px; align-items:center; }
         .bank-label { font-size:0.7rem; color:#888; text-transform: uppercase; }
@@ -58,6 +57,16 @@
         .b-wrong { background:var(--danger); }
         .b-bank { background:var(--accent); color:black; display: flex; flex-direction: column; justify-content: center; align-items: center; line-height: 1; }
         .b-correct { background:var(--success); color:black; }
+
+        /* OVALOS ESTILO HOST */
+        .host-penalties { display:none; flex-direction: column; width: 100%; gap: 10px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-top: 10px; }
+        .p-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .p-name { width: 60px; text-align: right; font-weight: bold; font-size: 0.9rem; color: var(--primary); }
+        .ovals-wrapper { display: flex; gap: 5px; }
+        .oval { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #555; background: #222; }
+        .oval.correct { background: var(--success); border-color: var(--success); }
+        .oval.wrong { background: var(--danger); border-color: var(--danger); }
+        .oval.current { border-color: var(--accent); transform: scale(1.2); }
 
         select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; flex-shrink: 0; }
         
@@ -113,6 +122,17 @@
                 <div id="answerText" class="a-text">Respuesta</div>
                 <div id="winnerBanner" style="display:none; color:var(--accent); font-size:2rem; font-weight:900; margin-top:20px;">
                     🏆 GANADOR: <span id="winnerName">--</span>
+                </div>
+            </div>
+
+            <div id="hostPenalties" class="host-penalties">
+                <div class="p-row">
+                    <div id="penP1Name" class="p-name">P1</div>
+                    <div id="penP1Ovals" class="ovals-wrapper"></div>
+                </div>
+                <div class="p-row">
+                    <div id="penP2Name" class="p-name">P2</div>
+                    <div id="penP2Ovals" class="ovals-wrapper"></div>
                 </div>
             </div>
 
@@ -182,7 +202,14 @@
             gameBtns: [document.getElementById('btnWrong'), document.getElementById('btnBank'), document.getElementById('btnCorrect')],
             btnBankOnly: document.getElementById('btnBank'),
             winnerBanner: document.getElementById('winnerBanner'),
-            winnerName: document.getElementById('winnerName')
+            winnerName: document.getElementById('winnerName'),
+            
+            // Host Ovals
+            hostPens: document.getElementById('hostPenalties'),
+            p1Name: document.getElementById('penP1Name'),
+            p1Ovals: document.getElementById('penP1Ovals'),
+            p2Name: document.getElementById('penP2Name'),
+            p2Ovals: document.getElementById('penP2Ovals')
         };
 
         function setPhase(p) { socket.emit('setPhase', p); }
@@ -201,6 +228,10 @@
                 b.disabled = false;
             });
             
+            // Mostrar Ovals solo en penalty
+            if (phase === 'penalty') els.hostPens.style.display = 'flex';
+            else els.hostPens.style.display = 'none';
+
             if(phase === 'voting' || phase === 'times_up') {
                 els.qArea.style.display = 'none';
                 els.vArea.style.display = 'block';
@@ -250,13 +281,12 @@
 
         socket.on('finalWinner', data => {
             els.winnerBanner.style.display = 'block';
-            els.winnerName.innerText = data.name; // Data now is {name, amount}
+            els.winnerName.innerText = data.name; 
             els.gameBtns.forEach(b => b.disabled = true);
         });
 
         socket.on('bankState', s => {
             els.bankTotal.innerText = `$${s.bankedTotal}`;
-            // Mostrar la ronda también
             els.bankRound.innerText = `$${s.bankedRound}`;
             
             els.bankBtnVal.innerText = `$${s.currentChainValue}`;
@@ -327,6 +357,37 @@
             } else if (res.type === 'tie') {
                 els.alertTie.style.display = 'block';
                 els.tieBreaker.innerText = res.decisionMaker;
+            }
+        });
+
+        socket.on('finalState', final => {
+            els.p1Name.innerText = final.p1.name;
+            els.p2Name.innerText = final.p2.name;
+            
+            els.p1Ovals.innerHTML = '';
+            const maxSlots = Math.max(5, final.p1.history.length + 1);
+            for(let i=0; i<maxSlots; i++) {
+                const div = document.createElement('div');
+                div.className = 'oval';
+                if (i < final.p1.history.length) {
+                    div.classList.add(final.p1.history[i] ? 'correct' : 'wrong');
+                } else if (i === final.p1.history.length && final.turn === 0) {
+                    div.classList.add('current');
+                }
+                els.p1Ovals.appendChild(div);
+            }
+
+            els.p2Ovals.innerHTML = '';
+            const maxSlots2 = Math.max(5, final.p2.history.length + 1);
+            for(let i=0; i<maxSlots2; i++) {
+                const div = document.createElement('div');
+                div.className = 'oval';
+                if (i < final.p2.history.length) {
+                    div.classList.add(final.p2.history[i] ? 'correct' : 'wrong');
+                } else if (i === final.p2.history.length && final.turn === 1) {
+                    div.classList.add('current');
+                }
+                els.p2Ovals.appendChild(div);
             }
         });
 
