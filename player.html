@@ -346,10 +346,20 @@
         });
 
         socket.on('timerUpdate', t => {
-            els.miniTimer.innerText = t;
-            if(t <= 5) els.miniTimer.className = 'header-timer timer-crit';
-            else if(t <= 10) els.miniTimer.className = 'header-timer timer-warn';
-            else els.miniTimer.className = 'header-timer';
+            const minutes = Math.floor(t / 60);
+            const seconds = t % 60;
+            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            els.miniTimer.innerText = timeString;
+        
+            // Ajuste de colores según el tiempo restante
+            if(t <= 10) {
+                els.miniTimer.className = 'header-timer timer-crit';
+            } else if(t <= 30) { // Ahora que el tiempo es más largo, el aviso empieza a los 30s
+                els.miniTimer.className = 'header-timer timer-warn';
+            } else {
+                els.miniTimer.className = 'header-timer';
+            }
         });
 
         socket.on('phaseChanged', (phase) => {
@@ -441,3 +451,4 @@
     </script>
 </body>
 </html>
+
