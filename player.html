@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>JUGADOR - RIVAL MÁS DÉBIL</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <style>
@@ -10,11 +10,11 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        /* HEADER FIJO */
         header { 
             position: fixed; top: 0; left: 0; width: 100%; height: 85px;
             display: grid; grid-template-columns: 1fr auto; align-items: center; 
             padding: 10px 20px; 
+            padding-top: max(10px, env(safe-area-inset-top)); /* iOS Notch Safe */
             background: #0a0a0a; border-bottom: 1px solid #333; z-index: 1000;
         }
         .header-info { display: flex; flex-direction: column; text-align: left; }
@@ -25,13 +25,19 @@
         .timer-crit { color: var(--danger); animation: pulse 0.5s infinite; }
         .highlight-name { color: var(--accent); font-weight: bold; }
 
-        /* PANTALLAS */
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
 
-        /* JUEGO */
-        #gameScreen { padding-top: 90px; justify-content: flex-start; }
-        .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; position: relative; z-index: 50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        /* PUNTO 2: iOS Fix - Más padding y márgenes explícitos */
+        #gameScreen { 
+            padding-top: 120px; /* Aumentado para seguridad */
+            justify-content: flex-start; 
+        }
+        .bank-info { 
+            width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; 
+            position: relative; z-index: 50; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
         .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
         .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
 
@@ -39,7 +45,6 @@
         .step { width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; display: flex; justify-content: center; align-items: center; }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
 
-        /* LOGIN & INTRO */
         .login-box { width:80%; text-align:center; }
         input { width:100%; padding:15px; background:#222; border:none; color:white; font-size:1.2rem; text-align:center; border-radius:10px; margin-bottom:15px; }
         .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; }
@@ -49,7 +54,6 @@
         .intro-text-2 { font-size:1.5rem; margin-top:10px; color:#888; animation: fadeIn 1s forwards 1s; opacity:0; }
         .intro-logo { font-size:3rem; font-weight:900; margin-top:20px; color:var(--primary); text-transform:uppercase; text-shadow:0 0 20px var(--primary); animation: zoomGlow 1.5s forwards 2s; opacity:0; transform:scale(0.5); }
 
-        /* OVERLAYS */
         .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
         #votingGrid { display:grid; grid-template-columns:1fr 1fr; gap:15px; width:90%; margin-top:20px; }
@@ -63,7 +67,6 @@
         .elim-icon { font-size:6rem; margin-bottom:20px; color: var(--danger); text-shadow: 0 0 30px var(--danger); }
         .elim-text { font-size:1.8rem; font-weight:bold; color: white; line-height: 1.4; }
 
-        /* PANTALLA DE PENALES */
         #penaltyScreen { background: #000; padding-top: 90px; }
         .penalty-container { display: flex; flex-direction: column; width: 100%; height: 100%; justify-content: center; gap: 30px; }
         .p-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -74,8 +77,24 @@
         .oval.wrong { background: var(--danger); box-shadow: 0 0 10px var(--danger); border-color: var(--danger); }
         .oval.current { border-color: var(--accent); animation: pulse 1s infinite; }
 
+        /* PUNTO 3: PANTALLA DE GANADOR EPICA */
+        #winnerScreen { 
+            background: radial-gradient(circle at center, #222 0%, #000 100%); 
+            z-index: 3000; 
+        }
+        .w-trophy { font-size: 6rem; animation: bounce 2s infinite; text-shadow: 0 0 50px gold; }
+        .w-title { font-size: 1.5rem; color: #888; text-transform: uppercase; margin-top: 20px; }
+        .w-name { font-size: 3.5rem; color: var(--primary); font-weight: 900; text-transform: uppercase; line-height: 1.1; margin: 10px 0; text-shadow: 0 0 20px var(--primary); animation: zoomGlow 2s infinite alternate; }
+        .w-msg { font-size: 1.2rem; color: white; margin-bottom: 20px; }
+        .w-amount { font-size: 4rem; color: var(--accent); font-weight: 900; text-shadow: 0 0 30px var(--accent); }
+        
+        /* Efecto Confeti Simple */
+        .confetti { position: absolute; width: 10px; height: 10px; background: red; animation: fall linear infinite; opacity: 0; }
+        
+        @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 1; } }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
         @keyframes fadeIn { to { opacity:1; } }
-        @keyframes zoomGlow { to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } }
+        @keyframes zoomGlow { to { transform:scale(1.05); text-shadow:0 0 40px var(--primary); } }
         @keyframes shake { 0%, 100% { transform:translateX(0); } 25% { transform:translateX(-5px); } 75% { transform:translateX(5px); } }
         @keyframes pulse { 0%{opacity:0.8} 50%{opacity:1} 100%{opacity:0.8} }
     </style>
@@ -146,6 +165,15 @@
         <div id="elimMsg" class="elim-text">Has sido eliminado.</div>
     </div>
 
+    <div id="winnerScreen" class="overlay">
+        <div class="w-trophy">🏆</div>
+        <div class="w-title">¡FELICIDADES!</div>
+        <div id="wName" class="w-name">NOMBRE</div>
+        <div class="w-msg">TÚ HAS SIDO EL RIVAL MÁS FUERTE</div>
+        <div style="font-size:0.9rem; color:#888; margin-top:10px;">HAS GANADO</div>
+        <div id="wAmount" class="w-amount">$0</div>
+        </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -153,8 +181,8 @@
         let isEliminated = false;
         let currentRound = 1;
         let myEliminationRound = null;
-        let isLoggedIn = false;      // <--- CANDADO DE SEGURIDAD
-        let currentPhase = 'waiting'; // Guardar fase actual para usarla después del login
+        let isLoggedIn = false;      
+        let currentPhase = 'waiting'; 
         
         const els = {
             login: document.getElementById('loginScreen'),
@@ -164,6 +192,8 @@
             vote: document.getElementById('voteScreen'),
             timesUp: document.getElementById('timesUpScreen'),
             elim: document.getElementById('eliminatedScreen'),
+            winner: document.getElementById('winnerScreen'),
+            
             ladder: document.getElementById('ladderContainer'),
             bank: document.getElementById('bankTotal'),
             waitOver: document.getElementById('waitingOverlay'),
@@ -176,7 +206,9 @@
             p1Name: document.getElementById('penP1Name'),
             p1Ovals: document.getElementById('penP1Ovals'),
             p2Name: document.getElementById('penP2Name'),
-            p2Ovals: document.getElementById('penP2Ovals')
+            p2Ovals: document.getElementById('penP2Ovals'),
+            wName: document.getElementById('wName'),
+            wAmount: document.getElementById('wAmount')
         };
 
         function enterGame() {
@@ -184,38 +216,27 @@
             if(!name) return;
             myName = name;
             socket.emit('registerPlayer', name);
-            
-            // UI Transition
             els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, estás jugando a El Rival más Débil`;
             els.login.classList.remove('active');
             els.intro.classList.add('active');
             els.introName.innerText = `¡Hola ${name}!`;
-            
-            // Activar candado y procesar fase después de la intro
             isLoggedIn = true;
-            
             setTimeout(() => {
                 els.intro.classList.remove('active');
-                renderPhase(currentPhase); // Mostrar la pantalla correcta según el estado del juego
+                renderPhase(currentPhase); 
             }, 4500);
         }
 
-        // FUNCIÓN CENTRAL PARA CONTROLAR QUÉ PANTALLA SE VE
         function renderPhase(phase) {
-            // Limpiar overlays
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
-            
-            // Ocultar pantallas base
             els.game.classList.remove('active');
             els.penalty.classList.remove('active');
 
-            // Lógica Eliminado
             if (isEliminated) {
                  if(phase === 'penalty') els.penalty.classList.add('active');
                  else els.game.classList.add('active');
-                 
                  if(phase === 'waiting') {
                     els.waitOver.style.display = 'flex';
                     els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
@@ -223,13 +244,11 @@
                 return; 
             }
 
-            // Lógica Juego
             if (phase === 'penalty') {
                 els.penalty.classList.add('active');
                 return;
             }
 
-            // Default: Ladder Game
             els.game.classList.add('active');
 
             if(phase === 'waiting') {
@@ -245,7 +264,28 @@
             }
         }
 
+        function createConfetti() {
+            const colors = ['#f1c40f', '#e74c3c', '#3498db', '#9b59b6', '#2ecc71'];
+            for(let i=0; i<50; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.backgroundColor = colors[Math.floor(Math.random()*colors.length)];
+                c.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                c.style.animationDelay = Math.random() + 's';
+                els.winner.appendChild(c);
+            }
+        }
+
         socket.on('gameReset', () => location.reload());
+
+        socket.on('finalWinner', data => {
+            // Mostrar pantalla ganadora incluso si estaba eliminado (para que todos vean al ganador)
+            els.winner.style.display = 'flex';
+            els.wName.innerText = data.name;
+            els.wAmount.innerText = `$${data.amount}`;
+            createConfetti();
+        });
 
         socket.on('playerEliminated', (name) => {
             if(name.toUpperCase() === myName.toUpperCase()) {
@@ -255,8 +295,7 @@
                 els.elim.style.display = 'flex';
                 setTimeout(() => {
                     els.elim.style.display = 'none'; 
-                    renderPhase(currentPhase); // Refrescar vista
-                    
+                    renderPhase(currentPhase);
                     els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, has sido el rival más débil de la ronda ${myEliminationRound}`;
                     els.headerSub.style.color = "var(--danger)";
                     els.waitOver.style.display = 'flex';
@@ -273,8 +312,8 @@
         });
 
         socket.on('phaseChanged', (phase) => {
-            currentPhase = phase; // Guardar siempre
-            if (!isLoggedIn) return; // Si no ha entrado, NO TOCAR UI
+            currentPhase = phase; 
+            if (!isLoggedIn) return; 
             renderPhase(phase);
         });
 
@@ -319,7 +358,6 @@
             els.p1Name.innerText = final.p1.name;
             els.p2Name.innerText = final.p2.name;
             
-            // P1 Ovals
             els.p1Ovals.innerHTML = '';
             const maxSlots = Math.max(5, final.p1.history.length + 1);
             for(let i=0; i<maxSlots; i++) {
@@ -333,7 +371,6 @@
                 els.p1Ovals.appendChild(div);
             }
 
-            // P2 Ovals
             els.p2Ovals.innerHTML = '';
             const maxSlots2 = Math.max(5, final.p2.history.length + 1);
             for(let i=0; i<maxSlots2; i++) {
