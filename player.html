@@ -11,13 +11,12 @@
         
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        /* CORRECCIÓN PUNTO 2: Header FIJO para que no tape nada */
+        /* HEADER FIJO MEJORADO */
         header { 
-            position: fixed; 
-            top: 0; left: 0; width: 100%; height: 85px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 85px;
             display: grid; grid-template-columns: 1fr auto; align-items: center; 
             padding: 10px 20px; 
-            background: #0a0a0a; border-bottom: 1px solid #333; z-index: 100;
+            background: #0a0a0a; border-bottom: 1px solid #333; z-index: 1000;
         }
         
         .header-info { display: flex; flex-direction: column; text-align: left; }
@@ -33,28 +32,25 @@
 
         .highlight-name { color: var(--accent); font-weight: bold; }
 
-        /* PANTALLAS */
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
 
-        /* JUEGO */
+        /* JUEGO: Margen superior para que el Banco baje y no choque con Header */
         #gameScreen { 
-            /* CORRECCIÓN PUNTO 2: Padding Top para respetar el Header Fijo */
-            padding-top: 90px; 
+            padding-top: 90px; /* Espacio exacto del header + un poco más */
             justify-content: flex-start; 
         }
 
-        /* CORRECCIÓN PUNTO 3: Banco siempre visible y acomodado */
+        /* BANCO: Z-Index alto para asegurar visibilidad */
         .bank-info { 
             width:100%; background:#111; padding:15px; text-align:center; 
             border-bottom:1px solid #333; 
-            /* Asegurar que se vea por encima de otros elementos si hay scroll */
-            position: relative; z-index: 10;
+            position: relative; z-index: 50; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
         .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
         .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
 
-        /* ESCALERA */
         #ladderContainer { 
             flex:1; display:flex; flex-direction: column-reverse; 
             justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; overflow-y: auto;
@@ -65,7 +61,6 @@
         }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
 
-        /* LOGIN & INTRO */
         .login-box { width:80%; text-align:center; }
         input { width:100%; padding:15px; background:#222; border:none; color:white; font-size:1.2rem; text-align:center; border-radius:10px; margin-bottom:15px; }
         .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; }
@@ -75,7 +70,6 @@
         .intro-text-2 { font-size:1.5rem; margin-top:10px; color:#888; animation: fadeIn 1s forwards 1s; opacity:0; }
         .intro-logo { font-size:3rem; font-weight:900; margin-top:20px; color:var(--primary); text-transform:uppercase; text-shadow:0 0 20px var(--primary); animation: zoomGlow 1.5s forwards 2s; opacity:0; transform:scale(0.5); }
 
-        /* OVERLAYS */
         .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
         #votingGrid { display:grid; grid-template-columns:1fr 1fr; gap:15px; width:90%; margin-top:20px; }
@@ -154,8 +148,7 @@
         let myName = "";
         let isEliminated = false;
         let currentRound = 1;
-        // CORRECCIÓN PUNTO 3: Variable para guardar la ronda exacta de eliminación
-        let myEliminationRound = null;
+        let myEliminationRound = null; // Variable para congelar la ronda
         
         const els = {
             login: document.getElementById('loginScreen'),
@@ -201,10 +194,8 @@
         socket.on('playerEliminated', (name) => {
             if(name.toUpperCase() === myName.toUpperCase()) {
                 isEliminated = true;
-                // Guardamos la ronda actual para siempre
-                myEliminationRound = currentRound;
+                myEliminationRound = currentRound; // CONGELAR RONDA
                 
-                // Mostrar pantalla roja temporal
                 els.elimMsg.innerText = `${myName}, has sido el rival más débil de la ronda ${myEliminationRound}`;
                 els.elim.style.display = 'flex';
                 
@@ -212,7 +203,6 @@
                     els.elim.style.display = 'none'; 
                     els.game.classList.add('active'); 
                     
-                    // Actualizar subtítulo y dejarlo FIJO con la ronda de eliminación
                     els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, has sido el rival más débil de la ronda ${myEliminationRound}`;
                     els.headerSub.style.color = "var(--danger)";
                     
@@ -235,7 +225,6 @@
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
 
             if (isEliminated) {
-                // CORRECCIÓN PUNTO 3: Mensaje persistente usando la ronda de eliminación guardada
                 if(phase === 'waiting') {
                     els.waitOver.style.display = 'flex';
                     els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
@@ -258,7 +247,6 @@
 
         socket.on('roundUpdate', r => {
             currentRound = r;
-            // Si no estoy eliminado, actualizo mensajes normales
             if(!isEliminated && (els.waitMsg.innerText.includes("Esperando") || els.waitMsg.innerText.includes("Atención"))) {
                 els.waitMsg.innerText = `Esperando comenzar RONDA ${r}`;
             }
