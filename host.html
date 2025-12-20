@@ -96,6 +96,9 @@
             <div id="questionArea" class="question-area">
                 <div id="questionText" class="q-text">Esperando inicio...</div>
                 <div id="answerText" class="a-text">Respuesta</div>
+                <div id="winnerBanner" style="display:none; color:var(--accent); font-size:2rem; font-weight:900; margin-top:20px;">
+                    🏆 GANADOR: <span id="winnerName">--</span>
+                </div>
             </div>
 
             <div id="votingResultsArea" class="voting-area">
@@ -161,7 +164,9 @@
             btnElim: document.getElementById('btnPhaseElim'),
             btnPen: document.getElementById('btnPhasePen'),
             gameBtns: [document.getElementById('btnWrong'), document.getElementById('btnBank'), document.getElementById('btnCorrect')],
-            btnBankOnly: document.getElementById('btnBank')
+            btnBankOnly: document.getElementById('btnBank'),
+            winnerBanner: document.getElementById('winnerBanner'),
+            winnerName: document.getElementById('winnerName')
         };
 
         function setPhase(p) { socket.emit('setPhase', p); }
@@ -174,13 +179,13 @@
         socket.on('timerUpdate', t => els.timer.innerText = t);
         
         socket.on('phaseChanged', phase => {
-            // Limpieza
-            [els.btnWait, els.btnQ, els.btnVote, els.btnElim].forEach(b => {
+            els.winnerBanner.style.display = 'none'; // Reset ganador
+
+            [els.btnWait, els.btnQ, els.btnVote, els.btnElim, els.btnPen].forEach(b => {
                 b.classList.remove('active', 'btn-next-step');
                 b.disabled = false;
             });
             
-            // Gestionar vista central
             if(phase === 'voting' || phase === 'times_up') {
                 els.qArea.style.display = 'none';
                 els.vArea.style.display = 'block';
@@ -191,7 +196,6 @@
                 els.alertTie.style.display = 'none';
             }
 
-            // --- Lógica de Botones y Estados ---
             if (phase === 'waiting') {
                 els.btnWait.classList.add('active');
                 els.btnQ.classList.add('btn-next-step');
@@ -201,6 +205,12 @@
                 els.btnQ.classList.add('active');
                 els.btnVote.classList.add('btn-next-step');
                 els.btnElim.disabled = true;
+                
+                // CORRECCIÓN: Desactivar botones de fase durante preguntas
+                els.btnVote.disabled = true;
+                els.btnElim.disabled = true;
+                els.btnPen.disabled = true;
+
                 els.gameBtns.forEach(b => b.disabled = false);
             } 
             else if (phase === 'voting' || phase === 'times_up') {
@@ -217,19 +227,23 @@
             }
             else if (phase === 'penalty') {
                 els.btnPen.classList.add('active');
-                // CORRECCIÓN PUNTO 2: Bloquear otros botones de fase
                 els.btnWait.disabled = true;
                 els.btnQ.disabled = true;
                 els.btnVote.disabled = true;
                 els.btnElim.disabled = true;
-
-                // Habilitar Bien y Mal
                 els.gameBtns.forEach(b => b.disabled = false);
-                // Deshabilitar solo la Banca
                 els.btnBankOnly.disabled = true;
             }
         });
 
+        socket.on('finalWinner', name => {
+            els.winnerBanner.style.display = 'block';
+            els.winnerName.innerText = name;
+            // Bloquear controles porque ya acabó
+            els.gameBtns.forEach(b => b.disabled = true);
+        });
+
+        // Resto del código igual...
         socket.on('bankState', s => {
             els.bank.innerText = `$${s.bankedTotal}`;
             els.bankBtnVal.innerText = `$${s.currentChainValue}`;
@@ -254,7 +268,6 @@
             els.elSelect.innerHTML = '<option value="">Selecciona...</option>';
             players.forEach(p => els.elSelect.innerHTML += `<option value="${p}">${p}</option>`);
 
-            // CORRECCIÓN PUNTO 2: Habilitar botón Final solo si hay 2 jugadores
             if (players.length === 2) {
                 els.btnPen.disabled = false;
             } else {
