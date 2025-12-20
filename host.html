@@ -81,7 +81,7 @@
             <button id="btnPhaseQ" class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
             <button id="btnPhaseVote" class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
             <button id="btnPhaseElim" class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
-            <button id="btnPhasePen" class="btn" style="background: linear-gradient(45deg, #FFD700, #DAA520); color:black; margin-top:10px;" onclick="setPhase('penalty')">🏆 GRAN FINAL</button>
+            <button id="btnPhasePen" class="btn" disabled style="background: linear-gradient(45deg, #FFD700, #DAA520); color:black; margin-top:10px;" onclick="setPhase('penalty')">🏆 GRAN FINAL</button>
             
             <div style="margin-top: 20px;">
                 <small style="color:#888">RONDA</small>
@@ -175,7 +175,7 @@
         
         socket.on('phaseChanged', phase => {
             // Limpieza
-            [els.btnWait, els.btnQ, els.btnVote, els.btnElim, els.btnPen].forEach(b => {
+            [els.btnWait, els.btnQ, els.btnVote, els.btnElim].forEach(b => {
                 b.classList.remove('active', 'btn-next-step');
                 b.disabled = false;
             });
@@ -215,12 +215,17 @@
                 els.btnVote.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = true);
             }
-            // CORRECCIÓN PUNTO 2: Reactivar botones en Penales
             else if (phase === 'penalty') {
                 els.btnPen.classList.add('active');
+                // CORRECCIÓN PUNTO 2: Bloquear otros botones de fase
+                els.btnWait.disabled = true;
+                els.btnQ.disabled = true;
+                els.btnVote.disabled = true;
+                els.btnElim.disabled = true;
+
                 // Habilitar Bien y Mal
                 els.gameBtns.forEach(b => b.disabled = false);
-                // Deshabilitar solo la Banca (porque no se usa en penales)
+                // Deshabilitar solo la Banca
                 els.btnBankOnly.disabled = true;
             }
         });
@@ -248,6 +253,13 @@
         socket.on('playersUpdated', players => {
             els.elSelect.innerHTML = '<option value="">Selecciona...</option>';
             players.forEach(p => els.elSelect.innerHTML += `<option value="${p}">${p}</option>`);
+
+            // CORRECCIÓN PUNTO 2: Habilitar botón Final solo si hay 2 jugadores
+            if (players.length === 2) {
+                els.btnPen.disabled = false;
+            } else {
+                els.btnPen.disabled = true;
+            }
         });
 
         socket.on('rankingUpdate', list => {
