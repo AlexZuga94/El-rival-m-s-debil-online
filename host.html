@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HOST - RIVAL MÁS DÉBIL</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <style>
@@ -10,28 +10,57 @@
         
         * { box-sizing: border-box; }
         
-        body { margin:0; padding:10px; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:grid; grid-template-rows: auto 1fr; gap:10px; overflow:hidden; }
+        body { 
+            margin:0; padding:10px; background:var(--bg); color:white; font-family:'Outfit'; 
+            /* TRUCO PARA TABLET: Usar dvh (Dynamic Viewport Height) */
+            height: 100dvh; 
+            width: 100vw;
+            display:flex; 
+            flex-direction: column;
+            gap:10px; 
+            overflow:hidden; 
+        }
         
-        header { display:flex; justify-content:space-between; align-items:center; background:var(--glass); padding:10px 20px; border-radius:12px; height: 70px; }
+        /* HEADER FIJO */
+        header { 
+            flex-shrink: 0; /* No encoger */
+            display:flex; justify-content:space-between; align-items:center; 
+            background:var(--glass); padding:0 20px; border-radius:12px; height: 70px; 
+        }
         .brand { font-weight:900; font-size:1.2rem; color:var(--primary); text-transform:uppercase; letter-spacing:1px; }
         .timer-box { font-size:2.5rem; font-weight:700; color:var(--primary); }
         .bank-box { text-align:right; } .bank-val { font-size:1.8rem; color:var(--accent); font-weight:bold; }
 
-        .main-grid { display:grid; grid-template-columns: 250px 1fr 250px; gap:10px; height: calc(100vh - 100px); overflow:hidden; }
-        .panel { background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; display:flex; flex-direction:column; gap:10px; }
+        /* GRID PRINCIPAL QUE OCUPA EL RESTO DEL ESPACIO */
+        .main-grid { 
+            flex: 1; /* Ocupa todo el espacio sobrante debajo del header */
+            display:grid; grid-template-columns: 250px 1fr 250px; gap:10px; 
+            min-height: 0; /* Vital para que el scroll interno funcione */
+        }
+
+        .panel { 
+            background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; 
+            display:flex; flex-direction:column; gap:10px; 
+            height: 100%; /* Llenar la altura de la grilla */
+            overflow: hidden;
+        }
         
-        /* Botones laterales */
+        /* BOTONES LATERALES */
         .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); transition:0.2s; text-align:left; font-size: 0.9rem; }
         .btn:hover { background:rgba(255,255,255,0.2); }
         .btn.active { background:var(--primary); color:black; }
         .btn-danger { color:var(--danger); border:1px solid var(--danger); }
         
-        /* CENTRO (Corrección de botones invisibles) */
-        .center-panel { position: relative; padding-bottom: 90px; } /* Espacio para botones */
+        /* PANEL CENTRAL (FLEXBOX MAGIC) */
+        .center-panel { 
+            display: flex; 
+            flex-direction: column; 
+            padding: 10px;
+        } 
         
         .question-area { 
-            flex: 1; 
-            overflow-y: auto; 
+            flex: 1; /* Ocupa todo el espacio disponible */
+            overflow-y: auto; /* Si la pregunta es muy larga, scrollear */
             padding: 20px; 
             background: rgba(0,0,0,0.3); 
             border-left: 4px solid var(--primary); 
@@ -42,23 +71,31 @@
         .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; margin-bottom: 20px; }
         .a-text { font-size:1.5rem; color:var(--success); background:rgba(0,255,157,0.1); padding:5px 20px; border-radius:20px; }
         
-        /* Botones de Acción (Fijos abajo) */
+        /* BOTONES DE CONTROL (FIJOS ABAJO) */
         .controls-area { 
-            position: absolute; bottom: 15px; left: 15px; right: 15px;
-            display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:70px; 
+            flex-shrink: 0; /* Nunca hacerse más pequeños */
+            display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:80px; 
         }
-        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.1rem; cursor:pointer; text-transform:uppercase; color: white; }
+        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.2rem; cursor:pointer; text-transform:uppercase; color: white; }
         .b-wrong { background:var(--danger); }
         .b-bank { background:var(--accent); color:black; }
         .b-correct { background:var(--success); color:black; }
         .big-btn:active { transform: scale(0.95); opacity: 0.8; }
 
-        /* Derecha */
-        select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; }
+        /* ELEMENTOS DERECHA */
+        select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; flex-shrink: 0; }
         .stat-row { display:flex; justify-content:space-between; font-size:0.9rem; border-bottom:1px solid #333; padding:5px 0; }
         
-        /* Botón Reset Visible */
-        .btn-reset { margin-top: auto; background: #300; border: 1px solid #500; color: #f88; text-align: center; }
+        /* RESET VISIBLE */
+        .btn-reset { margin-top: auto; background: #300; border: 1px solid #500; color: #f88; text-align: center; flex-shrink: 0; }
+
+        /* RESPONSIVE PARA TABLETS VERTICALES O MÓVILES (Por si acaso) */
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
+            .panel { height: auto; }
+            .question-area { min-height: 200px; }
+            body { overflow-y: auto; height: auto; }
+        }
     </style>
 </head>
 <body>
@@ -102,7 +139,7 @@
         <div class="panel">
             <small style="color:#888">ELIMINAR JUGADOR</small>
             <select id="eliminationSelect"><option value="">Selecciona...</option></select>
-            <button class="btn btn-danger" style="text-align:center; margin-top:5px;" onclick="eliminate()">ELIMINAR</button>
+            <button class="btn btn-danger" style="text-align:center; margin-top:5px; flex-shrink:0;" onclick="eliminate()">ELIMINAR</button>
             
             <hr style="border:0; border-top:1px solid #333; width:100%">
             <small style="color:#888">RANKING</small>
@@ -130,7 +167,7 @@
             if(val && confirm(`¿Eliminar a ${val}?`)) socket.emit('eliminatePlayer', val);
         }
         function resetGame() {
-            if(confirm("⚠ ¿ESTÁS SEGURO? Esto borrará a todos los jugadores y reiniciará el juego a cero.")) {
+            if(confirm("⚠ ¿ESTÁS SEGURO? Esto borrará todo.")) {
                 socket.emit('resetGame');
             }
         }
