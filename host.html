@@ -13,7 +13,13 @@
         header { flex-shrink: 0; display:flex; justify-content:space-between; align-items:center; background:var(--glass); padding:0 20px; border-radius:12px; height: 70px; }
         .brand { font-weight:900; font-size:1.2rem; color:var(--primary); text-transform:uppercase; }
         .timer-box { font-size:2.5rem; font-weight:700; color:var(--primary); }
-        .bank-box { text-align:right; } .bank-val { font-size:1.8rem; color:var(--accent); font-weight:bold; }
+        
+        /* PUNTO 1: Estilo para doble banco */
+        .bank-box { text-align:right; display:flex; flex-direction:column; justify-content:center; }
+        .bank-row { display:flex; justify-content:flex-end; gap:10px; align-items:center; }
+        .bank-label { font-size:0.7rem; color:#888; text-transform: uppercase; }
+        .bank-val { font-size:1.2rem; color:white; font-weight:bold; width: 80px; text-align: right; }
+        .total-val { color: var(--accent); font-size: 1.4rem; }
 
         .main-grid { flex: 1; display:grid; grid-template-columns: 250px 1fr 320px; gap:10px; min-height: 0; }
         .panel { background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; display:flex; flex-direction:column; gap:10px; height: 100%; overflow: hidden; }
@@ -71,7 +77,16 @@
     <header>
         <div class="brand">HOST CONTROL</div>
         <div class="timer-box">⏱ <span id="timerDisplay">20</span></div>
-        <div class="bank-box"><div style="font-size:0.7rem; color:#888;">BANCO</div><div id="bankDisplay" class="bank-val">$0</div></div>
+        <div class="bank-box">
+            <div class="bank-row">
+                <span class="bank-label">RONDA</span>
+                <span id="bankRoundDisplay" class="bank-val">$0</span>
+            </div>
+            <div class="bank-row">
+                <span class="bank-label">TOTAL</span>
+                <span id="bankTotalDisplay" class="bank-val total-val">$0</span>
+            </div>
+        </div>
     </header>
 
     <div class="main-grid">
@@ -142,7 +157,8 @@
         const socket = io();
         const els = {
             timer: document.getElementById('timerDisplay'),
-            bank: document.getElementById('bankDisplay'),
+            bankTotal: document.getElementById('bankTotalDisplay'),
+            bankRound: document.getElementById('bankRoundDisplay'),
             qText: document.getElementById('questionText'),
             aText: document.getElementById('answerText'),
             turn: document.getElementById('turnDisplay'),
@@ -179,8 +195,7 @@
         socket.on('timerUpdate', t => els.timer.innerText = t);
         
         socket.on('phaseChanged', phase => {
-            els.winnerBanner.style.display = 'none'; // Reset ganador
-
+            els.winnerBanner.style.display = 'none'; 
             [els.btnWait, els.btnQ, els.btnVote, els.btnElim, els.btnPen].forEach(b => {
                 b.classList.remove('active', 'btn-next-step');
                 b.disabled = false;
@@ -205,12 +220,9 @@
                 els.btnQ.classList.add('active');
                 els.btnVote.classList.add('btn-next-step');
                 els.btnElim.disabled = true;
-                
-                // CORRECCIÓN: Desactivar botones de fase durante preguntas
                 els.btnVote.disabled = true;
                 els.btnElim.disabled = true;
                 els.btnPen.disabled = true;
-
                 els.gameBtns.forEach(b => b.disabled = false);
             } 
             else if (phase === 'voting' || phase === 'times_up') {
@@ -236,16 +248,17 @@
             }
         });
 
-        socket.on('finalWinner', name => {
+        socket.on('finalWinner', data => {
             els.winnerBanner.style.display = 'block';
-            els.winnerName.innerText = name;
-            // Bloquear controles porque ya acabó
+            els.winnerName.innerText = data.name; // Data now is {name, amount}
             els.gameBtns.forEach(b => b.disabled = true);
         });
 
-        // Resto del código igual...
         socket.on('bankState', s => {
-            els.bank.innerText = `$${s.bankedTotal}`;
+            els.bankTotal.innerText = `$${s.bankedTotal}`;
+            // Mostrar la ronda también
+            els.bankRound.innerText = `$${s.bankedRound}`;
+            
             els.bankBtnVal.innerText = `$${s.currentChainValue}`;
             els.hLadder.innerHTML = '';
             s.chain.forEach((val, idx) => {
