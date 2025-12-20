@@ -36,7 +36,6 @@
         .question-area { flex: 1; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.3); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .voting-area { display: none; flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 10px; }
         
-        /* NUEVO: MENSAJE PRE-FINAL */
         .pre-final-msg { display:none; flex: 1; flex-direction:column; justify-content: center; align-items: center; text-align: center; }
         .pf-text { font-size: 2.5rem; font-weight: 900; color: var(--accent); text-transform: uppercase; animation: pulse 2s infinite; }
 
@@ -50,6 +49,7 @@
 
         .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; margin-bottom: 20px; }
         .a-text { font-size:1.5rem; color:var(--success); background:rgba(0,255,157,0.1); padding:5px 20px; border-radius:20px; }
+        .cat-text { font-size: 1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold; }
 
         #hostLadder { display: flex; gap: 5px; justify-content: center; align-items: center; padding: 5px; background: rgba(0,0,0,0.5); border-radius: 5px; margin-bottom: 10px; overflow-x: auto; white-space: nowrap; flex-shrink: 0; }
         .h-step { padding: 5px 10px; background: #222; border-radius: 4px; font-size: 0.8rem; color: #555; }
@@ -124,11 +124,12 @@
             <div id="turnDisplay" class="turn-banner">TURNO DE: --</div>
 
             <div id="questionArea" class="question-area">
+                <div id="qCategory" class="cat-text">CATEGORÍA</div>
                 <div id="questionText" class="q-text">Esperando inicio...</div>
                 <div id="answerText" class="a-text">Respuesta</div>
                 
                 <div id="winnerBanner" style="display:none; text-align:center; margin-top:20px;">
-                    <div style="color:var(--accent); font-size:1.5rem; font-weight:900;">🏆 GANADOR</div>
+                    <div style="color:var(--accent); font-size:1.2rem; font-weight:900;">🏆 EL GANADOR HA SIDO</div>
                     <div id="winnerName" style="color:white; font-size:2.5rem; font-weight:bold; line-height:1.1">--</div>
                     <div id="winnerAmount" style="color:var(--success); font-size:2rem; font-weight:bold;">$0</div>
                 </div>
@@ -188,12 +189,13 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        let activePlayersCount = 0; // NUEVO: Para saber cuándo mostrar mensaje final
+        let activePlayersCount = 0; 
 
         const els = {
             timer: document.getElementById('timerDisplay'),
             bankTotal: document.getElementById('bankTotalDisplay'),
             bankRound: document.getElementById('bankRoundDisplay'),
+            qCat: document.getElementById('qCategory'),
             qText: document.getElementById('questionText'),
             aText: document.getElementById('answerText'),
             turn: document.getElementById('turnDisplay'),
@@ -204,7 +206,7 @@
             bankBtnVal: document.getElementById('bankBtnVal'),
             qArea: document.getElementById('questionArea'),
             vArea: document.getElementById('votingResultsArea'),
-            preFinal: document.getElementById('preFinalArea'), // NUEVO
+            preFinal: document.getElementById('preFinalArea'), 
             vList: document.getElementById('votesList'),
             alertElim: document.getElementById('alertElim'),
             alertTie: document.getElementById('alertTie'),
@@ -239,7 +241,7 @@
         
         socket.on('phaseChanged', phase => {
             els.winnerBanner.style.display = 'none'; 
-            els.preFinal.style.display = 'none'; // Ocultar por defecto
+            els.preFinal.style.display = 'none'; 
 
             [els.btnWait, els.btnQ, els.btnVote, els.btnElim, els.btnPen].forEach(b => {
                 b.classList.remove('active', 'btn-next-step');
@@ -249,16 +251,14 @@
             if (phase === 'penalty') els.hostPens.style.display = 'flex';
             else els.hostPens.style.display = 'none';
 
-            // GESTIÓN DE PANTALLAS CENTRALES
             if(phase === 'voting' || phase === 'times_up') {
                 els.qArea.style.display = 'none';
                 
-                // LÓGICA ESPECIAL PARA EL FINAL DE LA RONDA DE 2 JUGADORES
                 if (activePlayersCount === 2) {
-                    els.vArea.style.display = 'none'; // No mostrar votación
-                    els.preFinal.style.display = 'flex'; // MOSTRAR MENSAJE FINAL
+                    els.vArea.style.display = 'none'; 
+                    els.preFinal.style.display = 'flex'; 
                 } else {
-                    els.vArea.style.display = 'block'; // Mostrar votación normal
+                    els.vArea.style.display = 'block'; 
                     els.preFinal.style.display = 'none';
                 }
 
@@ -269,7 +269,6 @@
                 els.alertTie.style.display = 'none';
             }
 
-            // ESTADOS DE BOTONES
             if (phase === 'waiting') {
                 els.btnWait.classList.add('active');
                 els.btnQ.classList.add('btn-next-step');
@@ -308,7 +307,6 @@
         });
 
         socket.on('finalWinner', data => {
-            // MOSTRAR BANNER GANADOR EN HOST
             els.winnerBanner.style.display = 'block';
             els.winnerName.innerText = data.name; 
             els.winnerAmount.innerText = `$${data.amount}`;
@@ -331,15 +329,23 @@
         });
         
         socket.on('questionUpdate', q => { 
-            if(q) { els.qText.innerText = q.question; els.aText.innerText = q.answer; } 
-            else { els.qText.innerText = "Esperando pregunta..."; els.aText.innerText = ""; }
+            if(q) { 
+                els.qCat.innerText = q.category || "GENERAL";
+                els.qText.innerText = q.question; 
+                els.aText.innerText = q.answer; 
+            } 
+            else { 
+                els.qCat.innerText = "";
+                els.qText.innerText = "Esperando pregunta..."; 
+                els.aText.innerText = ""; 
+            }
         });
         
         socket.on('turnUpdate', p => els.turn.innerText = `TURNO DE: ${p || "--"}`);
         socket.on('roundUpdate', r => els.round.innerText = r);
         
         socket.on('playersUpdated', players => {
-            activePlayersCount = players.length; // Guardar conteo global
+            activePlayersCount = players.length; 
             
             els.elSelect.innerHTML = '<option value="">Selecciona...</option>';
             players.forEach(p => els.elSelect.innerHTML += `<option value="${p}">${p}</option>`);
