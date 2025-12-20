@@ -26,6 +26,7 @@ const questionsList = [
 
 // CONFIGURACIÓN
 const ROUND_TIME_BASE = 20; 
+// Índices: 0=1, 1=2, 2=5, 3=10, 4=20, 5=50, 6=100
 const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; 
 
 let gameState = {
@@ -40,14 +41,7 @@ let gameState = {
     stats: {}, 
     votes: {}, 
     detailedVotes: [],
-    // NUEVO: OBJETO PARA LA FINAL
-    final: { 
-        active: false, 
-        p1: null, // { name: "JUAN", history: [true, false, true...] }
-        p2: null, 
-        turn: 0, // 0 para p1, 1 para p2
-        winner: null 
-    }
+    final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
 };
 
 let timerInterval = null;
@@ -60,7 +54,6 @@ const getCurrentPlayer = () => {
     return gameState.turnOrder[gameState.turnIndex % gameState.turnOrder.length] || "Nadie";
 };
 
-// ... (getStrongestPlayerName se mantiene igual) ...
 const getStrongestPlayerName = () => {
     if (gameState.players.length === 0) return null;
     const sorted = [...gameState.players].sort((a, b) => {
@@ -75,6 +68,7 @@ const broadcastState = () => {
     io.emit("phaseChanged", gameState.phase);
     io.emit("roundUpdate", gameState.round);
     
+    // Seguridad para la escalera
     if (typeof gameState.bank.chainIndex !== 'number' || isNaN(gameState.bank.chainIndex)) {
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
@@ -89,7 +83,6 @@ const broadcastState = () => {
     io.emit("turnUpdate", getCurrentPlayer());
     updateRanking();
     
-    // Enviar estado de la final si es necesario
     if (gameState.final.active) {
         io.emit("finalState", gameState.final);
     }
@@ -110,7 +103,6 @@ const updateRanking = () => {
     io.emit("rankingUpdate", ranking);
 };
 
-// ... (checkVotingResults se mantiene igual) ...
 const checkVotingResults = () => {
     const activeVoters = gameState.players.length;
     const votesCast = gameState.detailedVotes.length;
@@ -171,13 +163,13 @@ io.on("connection", (socket) => {
     });
 
     socket.on("setPhase", (phase) => {
-        // LÓGICA ESPECIAL PARA INICIAR PENALES
         if (phase === "penalty") {
             gameState.final.active = true;
-            // Configurar finalistas
-            gameState.final.p1 = { name: gameState.players[0], history: [] };
-            gameState.final.p2 = { name: gameState.players[1], history: [] };
-            gameState.final.turn = 0; // Empieza P1
+            if(gameState.players.length >= 2) {
+                gameState.final.p1 = { name: gameState.players[0], history: [] };
+                gameState.final.p2 = { name: gameState.players[1], history: [] };
+            }
+            gameState.final.turn = 0; 
             gameState.phase = "penalty";
             broadcastState();
             return;
@@ -206,43 +198,48 @@ io.on("connection", (socket) => {
     });
 
     socket.on("correctAnswer", () => {
-        // --- LÓGICA DE PENALES ---
         if (gameState.phase === "penalty") {
             const isP1 = gameState.final.turn === 0;
-            if (isP1) gameState.final.p1.history.push(true); // true = acierto
+            if (isP1) gameState.final.p1.history.push(true);
             else gameState.final.p2.history.push(true);
-            
-            // Cambio de turno
             gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
-            
             gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
             broadcastState();
-            checkWinner(); // Verificar si ya ganó alguien
             return;
         }
 
-        // Lógica normal...
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].correct++;
         
+        // --- CORRECCIÓN PUNTO 1: Auto-Banca al completar escalera ---
         if (isNaN(gameState.bank.chainIndex)) gameState.bank.chainIndex = -1;
-        const maxIndex = CHAIN_VALUES.length - 1;
+        const maxIndex = CHAIN_VALUES.length - 1; // Index 6 (Valor 100)
         
-        if (gameState.bank.chainIndex === maxIndex - 1) {
-            const maxVal = CHAIN_VALUES[maxIndex];
+        // Si estamos en el Index 5 ($50) y acertamos, llegamos al tope ($100)
+        // El usuario quiere que se guarde AUTOMÁTICAMENTE
+        if (gameState.bank.chainIndex >= maxIndex - 1) {
+            const maxVal = CHAIN_VALUES[maxIndex]; // $100
+            
+            // Sumar al banco total
             gameState.bank.total += maxVal;
+            
+            // Estadísticas jugador
             if (gameState.stats[player]) {
                 gameState.stats[player].bankAmount += maxVal;
                 gameState.stats[player].bankCount++;
             }
+            
+            // REINICIAR ESCALERA
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
+            
+            // Sonido de éxito
             io.emit("bankSuccess");
+            
         } else {
-            if (gameState.bank.chainIndex < maxIndex) {
-                gameState.bank.chainIndex++;
-                gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
-            }
+            // Subir normal
+            gameState.bank.chainIndex++;
+            gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
         }
         
         gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
@@ -251,23 +248,19 @@ io.on("connection", (socket) => {
     });
 
     socket.on("wrongAnswer", () => {
-        // --- LÓGICA DE PENALES ---
         if (gameState.phase === "penalty") {
             const isP1 = gameState.final.turn === 0;
-            if (isP1) gameState.final.p1.history.push(false); // false = error
+            if (isP1) gameState.final.p1.history.push(false);
             else gameState.final.p2.history.push(false);
-            
             gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
-            
             gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
             broadcastState();
-            checkWinner();
             return;
         }
 
-        // Lógica normal...
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].wrong++;
+        
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
         gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
@@ -312,26 +305,11 @@ io.on("connection", (socket) => {
         io.emit("playerEliminated", name);
         io.emit("playersUpdated", gameState.players);
         
-        // CORRECCIÓN: Si quedan 2, jugamos UNA RONDA MÁS antes de los penales
-        // Pero marcamos una variable interna si quisieras, o simplemente el Host lo sabe.
-        // Aquí seguimos la lógica normal: aumentamos ronda y a esperar.
-        // La diferencia es visual en el Host (ver Host.html).
-        
         gameState.round++;
         gameState.phase = "waiting"; 
         broadcastState();
     });
 });
-
-function checkWinner() {
-    // Lógica simple de "Mejor de 5" o Muerte Súbita
-    // Solo emitimos si hay ganador, el cliente muestra el mensaje
-    // Para simplificar, el Host decidirá cuándo parar si es muy complejo,
-    // pero aquí calculamos score básico.
-    
-    // Puedes expandir esta función para automatizar el "Ganador Matemático"
-    // De momento, solo guardamos el estado y que el Host lo vea.
-}
 
 function advanceTurn() {
     if (gameState.turnOrder.length === 0) return;
