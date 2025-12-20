@@ -15,10 +15,15 @@
         .timer-box { font-size:2.5rem; font-weight:700; color:var(--primary); }
         .bank-box { text-align:right; } .bank-val { font-size:1.8rem; color:var(--accent); font-weight:bold; }
 
-        .main-grid { flex: 1; display:grid; grid-template-columns: 250px 1fr 300px; gap:10px; min-height: 0; }
+        .main-grid { flex: 1; display:grid; grid-template-columns: 250px 1fr 320px; gap:10px; min-height: 0; }
         .panel { background:var(--glass); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; display:flex; flex-direction:column; gap:10px; height: 100%; overflow: hidden; }
         
-        .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); text-align:left; font-size: 0.9rem; }
+        .btn { padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; text-transform:uppercase; color:white; background:rgba(255,255,255,0.1); text-align:left; font-size: 0.9rem; transition: all 0.2s; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
+        
+        /* Highlight para el siguiente paso recomendado */
+        .btn-next-step { border: 2px solid var(--primary); background: rgba(0, 210, 255, 0.2); box-shadow: 0 0 10px var(--primary); }
+        
         .btn.active { background:var(--primary); color:black; }
         .btn-danger { color:var(--danger); border:1px solid var(--danger); }
         .btn-reset { margin-top: auto; background: #300; border: 1px solid #500; color: #f88; text-align: center; flex-shrink: 0; }
@@ -26,16 +31,12 @@
         .center-panel { display: flex; flex-direction: column; padding: 10px; position: relative; } 
         .turn-banner { text-align: center; background: rgba(0, 210, 255, 0.1); padding: 5px; border-radius: 5px; border: 1px solid var(--primary); color: var(--primary); font-weight: bold; font-size: 1.2rem; margin-bottom: 10px; }
 
-        /* AREAS CENTRALES INTERCAMBIABLES */
         .question-area { flex: 1; overflow-y: auto; padding: 20px; background: rgba(0,0,0,0.3); border-left: 4px solid var(--primary); border-radius: 8px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        
-        /* PUNTO 6: ÁREA DE VOTACIÓN */
         .voting-area { display: none; flex: 1; overflow-y: auto; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 10px; }
         .vote-card { background: #222; margin-bottom: 5px; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; font-size: 1.1rem; }
         .voter-name { color: #888; font-size: 0.9rem; }
         .target-name { color: var(--danger); font-weight: bold; }
         
-        /* ALERTAS DE VOTACIÓN (PUNTO 7 y 8) */
         .vote-alert { padding: 15px; text-align: center; font-weight: 900; font-size: 1.2rem; border-radius: 8px; margin-bottom: 10px; display: none; }
         .alert-elim { background: var(--danger); color: white; }
         .alert-tie { background: var(--accent); color: black; }
@@ -48,20 +49,22 @@
         .h-step.active { background: var(--accent); color: black; font-weight: bold; transform: scale(1.1); }
 
         .controls-area { flex-shrink: 0; display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; height:80px; }
-        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.1rem; cursor:pointer; text-transform:uppercase; color: white; }
+        .big-btn { border:none; border-radius:8px; font-weight:900; font-size:1.1rem; cursor:pointer; text-transform:uppercase; color: white; transition: 0.2s; }
+        /* PUNTO 6: Botones desactivados */
+        .big-btn:disabled { opacity: 0.2; filter: grayscale(100%); pointer-events: none; }
+        
         .b-wrong { background:var(--danger); }
         .b-bank { background:var(--accent); color:black; display: flex; flex-direction: column; justify-content: center; align-items: center; line-height: 1; }
         .b-correct { background:var(--success); color:black; }
 
         select { width:100%; padding:10px; background:#222; color:white; border:1px solid #444; border-radius:5px; flex-shrink: 0; }
         
-        /* PUNTO 3: Ranking con más columnas */
         .stat-header { display:flex; justify-content:space-between; font-size:0.8rem; color:#888; border-bottom:1px solid #555; padding:5px; margin-bottom:5px; }
         .stat-row { display:flex; justify-content:space-between; font-size:0.9rem; border-bottom:1px solid #333; padding:8px 0; }
         .col-name { flex: 2; font-weight: bold; }
         .col-data { flex: 1; text-align: center; }
+        .col-money { flex: 1.2; text-align: right; color: var(--accent); }
         
-        /* PUNTO 5: Colores Ranking */
         .row-strongest { color: var(--success); }
         .row-strongest .col-name::after { content: ' ★'; }
         .row-weakest { color: var(--danger); }
@@ -78,10 +81,11 @@
     <div class="main-grid">
         <div class="panel">
             <small style="color:#888">FASES</small>
-            <button class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
-            <button class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
-            <button class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
-            <button class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
+            <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
+            <button id="btnPhaseQ" class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
+            <button id="btnPhaseVote" class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
+            <button id="btnPhaseElim" class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
+            
             <div style="margin-top: 20px;">
                 <small style="color:#888">RONDA</small>
                 <div id="roundDisplay" style="font-size:1.5rem; font-weight:bold">1</div>
@@ -101,19 +105,18 @@
                 <h3 style="text-align:center; margin:0 0 10px 0;">RESULTADOS VOTACIÓN</h3>
                 <div id="alertElim" class="vote-alert alert-elim">ELIMINAR A: <span id="elimTarget">--</span></div>
                 <div id="alertTie" class="vote-alert alert-tie">¡EMPATE! DECIDE: <span id="tieBreaker">--</span></div>
-                
                 <div id="votesList"></div>
             </div>
             
             <div id="hostLadder"></div>
 
             <div class="controls-area">
-                <button class="big-btn b-wrong" onclick="socket.emit('wrongAnswer')">✖ MAL</button>
-                <button id="btnBankHost" class="big-btn b-bank" onclick="socket.emit('bank')">
+                <button id="btnWrong" class="big-btn b-wrong" onclick="socket.emit('wrongAnswer')">✖ MAL</button>
+                <button id="btnBank" class="big-btn b-bank" onclick="socket.emit('bank')">
                     <span>💰 BANCA</span>
                     <span id="bankBtnVal" style="font-size: 0.9rem; margin-top: 2px;">$0</span>
                 </button>
-                <button class="big-btn b-correct" onclick="socket.emit('correctAnswer')">✔ BIEN</button>
+                <button id="btnCorrect" class="big-btn b-correct" onclick="socket.emit('correctAnswer')">✔ BIEN</button>
             </div>
         </div>
 
@@ -128,7 +131,7 @@
                 <span style="flex:2">JUG</span>
                 <span style="flex:1; text-align:center">✔</span>
                 <span style="flex:1; text-align:center">✖</span>
-                <span style="flex:1; text-align:center">🏦</span>
+                <span style="flex:1.2; text-align:right">💲</span>
             </div>
             <div id="rankingList" style="overflow-y:auto; flex:1;"></div>
         </div>
@@ -154,7 +157,13 @@
             alertElim: document.getElementById('alertElim'),
             alertTie: document.getElementById('alertTie'),
             elimTarget: document.getElementById('elimTarget'),
-            tieBreaker: document.getElementById('tieBreaker')
+            tieBreaker: document.getElementById('tieBreaker'),
+            // Control buttons
+            btnWait: document.getElementById('btnPhaseWait'),
+            btnQ: document.getElementById('btnPhaseQ'),
+            btnVote: document.getElementById('btnPhaseVote'),
+            btnElim: document.getElementById('btnPhaseElim'),
+            gameBtns: [document.getElementById('btnWrong'), document.getElementById('btnBank'), document.getElementById('btnCorrect')]
         };
 
         function setPhase(p) { socket.emit('setPhase', p); }
@@ -167,7 +176,13 @@
         socket.on('timerUpdate', t => els.timer.innerText = t);
         
         socket.on('phaseChanged', phase => {
-            // PUNTO 6: Alternar Vistas
+            // 1. Limpiar estilos
+            [els.btnWait, els.btnQ, els.btnVote, els.btnElim].forEach(b => {
+                b.classList.remove('active', 'btn-next-step');
+                b.disabled = false;
+            });
+
+            // 2. Gestionar Paneles Centrales
             if(phase === 'voting' || phase === 'times_up') {
                 els.qArea.style.display = 'none';
                 els.vArea.style.display = 'block';
@@ -176,6 +191,31 @@
                 els.vArea.style.display = 'none';
                 els.alertElim.style.display = 'none';
                 els.alertTie.style.display = 'none';
+            }
+
+            // 3. PUNTO 5 y 6: Lógica de Botones (Semáforo y Bloqueo)
+            if (phase === 'waiting') {
+                els.btnWait.classList.add('active');
+                els.btnQ.classList.add('btn-next-step'); // Sugerir Preguntas
+                els.gameBtns.forEach(b => b.disabled = true); // Sin juego
+            } 
+            else if (phase === 'questions') {
+                els.btnQ.classList.add('active');
+                els.btnVote.classList.add('btn-next-step'); // Sugerir Votación
+                els.btnElim.disabled = true; // No eliminar durante preguntas
+                els.gameBtns.forEach(b => b.disabled = false); // Juego Activo
+            } 
+            else if (phase === 'voting' || phase === 'times_up') {
+                els.btnVote.classList.add('active');
+                els.btnElim.classList.add('btn-next-step'); // Sugerir Eliminar
+                els.btnQ.disabled = true; // No volver a preguntas sin eliminar
+                els.gameBtns.forEach(b => b.disabled = true); // Juego Bloqueado
+            } 
+            else if (phase === 'elimination') {
+                els.btnElim.classList.add('active');
+                els.btnQ.classList.add('btn-next-step'); // Sugerir Siguiente Ronda
+                els.btnVote.disabled = true;
+                els.gameBtns.forEach(b => b.disabled = true);
             }
         });
 
@@ -205,27 +245,24 @@
         });
 
         socket.on('rankingUpdate', list => {
-            // PUNTO 5: Colorear Ranking
             list.sort((a,b) => b.correct - a.correct);
-            
             els.rank.innerHTML = list.map((p, index) => {
                 let rowClass = "";
                 if (list.length > 1) {
                     if (index === 0) rowClass = "row-strongest";
                     if (index === list.length - 1) rowClass = "row-weakest";
                 }
-                // PUNTO 3: Columnas Extra
+                // PUNTO 4: Columna Money
                 return `
                 <div class="stat-row ${rowClass}">
                     <span class="col-name">${p.name}</span>
                     <span class="col-data">${p.correct}</span>
                     <span class="col-data">${p.wrong}</span>
-                    <span class="col-data">${p.bankCount}</span>
+                    <span class="col-money">$${p.bankAmount}</span>
                 </div>`;
             }).join('');
         });
 
-        // VOTOS DETALLADOS
         socket.on('votesUpdated', data => {
             els.vList.innerHTML = data.details.map(v => `
                 <div class="vote-card">
@@ -235,7 +272,6 @@
             `).join('');
         });
 
-        // RESULTADOS DE VOTACIÓN (PUNTO 7 y 8)
         socket.on('votingResult', res => {
             if(!res) {
                 els.alertElim.style.display = 'none';
