@@ -35,7 +35,8 @@ let gameState = {
     round: 1,
     phase: "waiting", 
     timer: ROUND_TIME_BASE,
-    bank: { total: 0, chainIndex: -1, currentValue: 0 },
+    // PUNTO 1: Agregamos 'roundTotal'
+    bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
     questionIndex: 0,
     stats: {}, 
     votes: {}, 
@@ -76,7 +77,8 @@ const broadcastState = () => {
         chain: CHAIN_VALUES, 
         chainIndex: gameState.bank.chainIndex, 
         currentChainValue: gameState.bank.currentValue, 
-        bankedTotal: gameState.bank.total 
+        bankedTotal: gameState.bank.total,
+        bankedRound: gameState.bank.roundTotal // Enviamos el de la ronda
     });
     io.emit("turnUpdate", getCurrentPlayer());
     updateRanking();
@@ -124,50 +126,38 @@ const checkVotingResults = () => {
     }
 };
 
-// --- NUEVA LÓGICA DE PENALES MATEMÁTICOS ---
 function checkPenaltyWinner() {
     const p1 = gameState.final.p1;
     const p2 = gameState.final.p2;
     
-    // Calcular puntajes actuales (contar los 'true')
     const score1 = p1.history.filter(x => x === true).length;
     const score2 = p2.history.filter(x => x === true).length;
     
     const shots1 = p1.history.length;
     const shots2 = p2.history.length;
     
-    // --- FASE 1: MEJOR DE 5 ---
     if (shots1 <= 5 || shots2 <= 5) {
-        // Tiros restantes (suponiendo que acaban en 5)
         const remaining1 = 5 - shots1;
         const remaining2 = 5 - shots2;
         
-        // GANADOR MATEMÁTICO:
-        // Si P1 tiene más puntos que los que P2 podría lograr aunque acierte todo lo que le falta.
-        if (score1 > score2 + remaining2) {
-            gameState.final.winner = p1.name;
-        }
-        else if (score2 > score1 + remaining1) {
-            gameState.final.winner = p2.name;
-        }
-        // EMPATE AL FINAL DE 5 TIROS -> MUERTE SÚBITA
-        else if (shots1 === 5 && shots2 === 5 && score1 === score2) {
-            gameState.final.suddenDeath = true;
-        }
+        if (score1 > score2 + remaining2) gameState.final.winner = p1.name;
+        else if (score2 > score1 + remaining1) gameState.final.winner = p2.name;
+        else if (shots1 === 5 && shots2 === 5 && score1 === score2) gameState.final.suddenDeath = true;
     }
-    // --- FASE 2: MUERTE SÚBITA (Shots > 5) ---
     else {
         gameState.final.suddenDeath = true;
-        // En muerte súbita, deben haber tirado la misma cantidad para comparar
         if (shots1 === shots2) {
             if (score1 > score2) gameState.final.winner = p1.name;
             else if (score2 > score1) gameState.final.winner = p2.name;
         }
     }
 
-    // SI HAY GANADOR, EMITIR
     if (gameState.final.winner) {
-        io.emit("finalWinner", gameState.final.winner);
+        // PUNTO 3: Enviar nombre Y monto total
+        io.emit("finalWinner", { 
+            name: gameState.final.winner, 
+            amount: gameState.bank.total 
+        });
     }
 }
 
@@ -197,7 +187,8 @@ io.on("connection", (socket) => {
         gameState = {
             players: [], turnOrder: [], turnIndex: 0, round: 1, phase: "waiting",
             timer: ROUND_TIME_BASE,
-            bank: { total: 0, chainIndex: -1, currentValue: 0 },
+            // Resetear también roundTotal
+            bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
             questionIndex: 0, stats: {}, votes: {}, detailedVotes: [],
             final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
         };
@@ -215,7 +206,7 @@ io.on("connection", (socket) => {
                 gameState.final.p2 = { name: gameState.players[1], history: [] };
             }
             gameState.final.turn = 0; 
-            gameState.final.winner = null; // Reset ganador
+            gameState.final.winner = null;
             gameState.final.suddenDeath = false;
             gameState.phase = "penalty";
             broadcastState();
@@ -227,6 +218,9 @@ io.on("connection", (socket) => {
         if (phase === "questions") {
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
+            // Reiniciar banco de ronda al empezar preguntas
+            gameState.bank.roundTotal = 0;
+            
             io.emit("questionUpdate", questionsList[gameState.questionIndex]);
             startTimer();
         } 
@@ -246,20 +240,13 @@ io.on("connection", (socket) => {
 
     socket.on("correctAnswer", () => {
         if (gameState.phase === "penalty") {
-            // Si ya hay ganador, ignorar
             if (gameState.final.winner) return;
-
             const isP1 = gameState.final.turn === 0;
             if (isP1) gameState.final.p1.history.push(true);
             else gameState.final.p2.history.push(true);
-            
-            // Checar si ganó ANTES de cambiar turno
             checkPenaltyWinner();
-            
-            // Cambiar turno
             gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
             gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
-            
             broadcastState();
             return;
         }
@@ -272,7 +259,10 @@ io.on("connection", (socket) => {
 
         if (gameState.bank.chainIndex === maxIndex) {
             const maxVal = CHAIN_VALUES[maxIndex]; 
+            // Sumar a Total y a Ronda
             gameState.bank.total += maxVal;
+            gameState.bank.roundTotal += maxVal;
+            
             if (gameState.stats[player]) {
                 gameState.stats[player].bankAmount += maxVal;
                 gameState.stats[player].bankCount++;
@@ -293,16 +283,12 @@ io.on("connection", (socket) => {
     socket.on("wrongAnswer", () => {
         if (gameState.phase === "penalty") {
             if (gameState.final.winner) return;
-
             const isP1 = gameState.final.turn === 0;
             if (isP1) gameState.final.p1.history.push(false);
             else gameState.final.p2.history.push(false);
-            
             checkPenaltyWinner();
-            
             gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
             gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
-            
             broadcastState();
             return;
         }
@@ -320,6 +306,8 @@ io.on("connection", (socket) => {
     socket.on("bank", () => {
         if (gameState.bank.currentValue > 0) {
             gameState.bank.total += gameState.bank.currentValue;
+            gameState.bank.roundTotal += gameState.bank.currentValue;
+            
             const player = getCurrentPlayer();
             if (gameState.stats[player]) {
                 gameState.stats[player].bankAmount += gameState.bank.currentValue;
