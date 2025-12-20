@@ -2,59 +2,14 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
+// IMPORTAR PREGUNTAS DESDE ARCHIVO EXTERNO
+const questionsList = require('./questions');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(__dirname));
-
-// --- BASE DE DATOS DE PREGUNTAS (CON CATEGORÍAS) ---
-const questionsList = [
-    // GEOGRAFÍA
-    { category: "Geografía", question: "País con mayor extensión del Río Amazonas", answer: "Brasil" },
-    { category: "Geografía", question: "¿Capital de Italia?", answer: "Roma" },
-    { category: "Geografía", question: "¿Dónde está la Torre Eiffel?", answer: "Francia" },
-    { category: "Geografía", question: "¿Cuál es el océano más grande?", answer: "Pacífico" },
-    { category: "Geografía", question: "¿País más grande del mundo?", answer: "Rusia" },
-    
-    // CIENCIA
-    { category: "Ciencia", question: "¿Planeta más cercano al Sol?", answer: "Mercurio" },
-    { category: "Ciencia", question: "¿Símbolo químico del Hidrógeno?", answer: "H" },
-    { category: "Ciencia", question: "¿Metal precioso amarillo?", answer: "Oro" },
-    { category: "Ciencia", question: "¿Cuántas patas tiene una araña?", answer: "Ocho" },
-    { category: "Ciencia", question: "¿Órgano que bombea sangre?", answer: "Corazón" },
-    
-    // HISTORIA
-    { category: "Historia", question: "¿En qué año llegó Colón a América?", answer: "1492" },
-    { category: "Historia", question: "¿Primer presidente de Estados Unidos?", answer: "Washington" },
-    { category: "Historia", question: "¿Civilización que construyó Machu Picchu?", answer: "Inca" },
-    { category: "Historia", question: "¿Conflicto bélico de 1939 a 1945?", answer: "Segunda Guerra Mundial" },
-
-    // CULTURA GENERAL
-    { category: "General", question: "¿Cuántos lados tiene un hexágono?", answer: "Seis" },
-    { category: "General", question: "¿Color de la esperanza?", answer: "Verde" },
-    { category: "General", question: "¿Cuántos años tiene un siglo?", answer: "100" },
-    { category: "General", question: "¿Moneda de Japón?", answer: "Yen" },
-    
-    // ARTE Y LITERATURA
-    { category: "Arte", question: "¿Autor del Quijote?", answer: "Cervantes" },
-    { category: "Arte", question: "¿Pintor de la Mona Lisa?", answer: "Da Vinci" },
-    { category: "Arte", question: "¿Quién escribió Hamlet?", answer: "Shakespeare" },
-    
-    // ENTRETENIMIENTO
-    { category: "Cine", question: "¿Nombre del ogro verde de Dreamworks?", answer: "Shrek" },
-    { category: "Comics", question: "¿Alter ego de Batman?", answer: "Bruce Wayne" },
-    { category: "Música", question: "¿El Rey del Pop?", answer: "Michael Jackson" },
-    
-    // DEPORTES
-    { category: "Deportes", question: "¿Deporte rey en Brasil?", answer: "Fútbol" },
-    { category: "Deportes", question: "¿Cuántos jugadores tiene un equipo de fútbol?", answer: "11" },
-    { category: "Deportes", question: "¿En qué deporte se usa una raqueta?", answer: "Tenis" },
-    
-    // MATEMÁTICAS
-    { category: "Matemáticas", question: "¿Cuánto es 5 por 5?", answer: "25" },
-    { category: "Matemáticas", question: "¿Figura geométrica de 3 lados?", answer: "Triángulo" }
-];
 
 // CONFIGURACIÓN
 const ROUND_TIME_BASE = 20; 
@@ -68,7 +23,11 @@ let gameState = {
     phase: "waiting", 
     timer: ROUND_TIME_BASE,
     bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
-    questionIndex: 0,
+    
+    // Manejo de preguntas aleatorias
+    currentQuestion: null,
+    lastCategory: null,
+    
     stats: {}, 
     votes: {}, 
     detailedVotes: [],
@@ -77,6 +36,27 @@ let gameState = {
 
 let timerInterval = null;
 let playerSockets = {}; 
+
+// --- FUNCIÓN PARA OBTENER PREGUNTA ALEATORIA (SIN REPETIR CATEGORÍA) ---
+function getNextRandomQuestion() {
+    // 1. Filtrar preguntas que NO sean de la misma categoría anterior
+    let available = questionsList.filter(q => q.category !== gameState.lastCategory);
+    
+    // Si no hay preguntas disponibles (caso raro o solo queda 1 categoría), usar todas
+    if (available.length === 0) {
+        available = questionsList;
+    }
+    
+    // 2. Elegir una al azar
+    const randomIndex = Math.floor(Math.random() * available.length);
+    const selected = available[randomIndex];
+    
+    // 3. Actualizar última categoría
+    gameState.lastCategory = selected.category;
+    gameState.currentQuestion = selected;
+    
+    return selected;
+}
 
 const getCurrentPlayer = () => {
     if (gameState.phase === 'penalty' || gameState.phase === 'final_intro') {
@@ -118,8 +98,8 @@ const broadcastState = () => {
         io.emit("finalState", gameState.final);
     }
     
-    if(gameState.phase === "questions" || gameState.phase === "penalty") {
-        io.emit("questionUpdate", questionsList[gameState.questionIndex]);
+    if((gameState.phase === "questions" || gameState.phase === "penalty") && gameState.currentQuestion) {
+        io.emit("questionUpdate", gameState.currentQuestion);
     }
 };
 
@@ -157,6 +137,7 @@ const checkVotingResults = () => {
     }
 };
 
+// --- CORRECCIÓN LÓGICA DE PENALES ---
 function checkPenaltyWinner() {
     const p1 = gameState.final.p1;
     const p2 = gameState.final.p2;
@@ -167,16 +148,30 @@ function checkPenaltyWinner() {
     const shots1 = p1.history.length;
     const shots2 = p2.history.length;
     
+    // 1. FASE REGULAR (Mejor de 5)
+    // Solo declaramos ganador si matemáticamente el otro NO puede alcanzarlo
+    // PERO: Si van 5 tiros exactos cada uno, se define por score.
+    
     if (shots1 <= 5 || shots2 <= 5) {
         const remaining1 = 5 - shots1;
         const remaining2 = 5 - shots2;
         
+        // P1 ya ganó (P2 no lo alcanza ni acertando todo lo que le falta)
         if (score1 > score2 + remaining2) gameState.final.winner = p1.name;
+        // P2 ya ganó
         else if (score2 > score1 + remaining1) gameState.final.winner = p2.name;
-        else if (shots1 === 5 && shots2 === 5 && score1 === score2) gameState.final.suddenDeath = true;
+        
+        // Empate al final de los 5 tiros -> Activar Muerte Súbita
+        else if (shots1 === 5 && shots2 === 5 && score1 === score2) {
+            gameState.final.suddenDeath = true;
+        }
     }
+    // 2. MUERTE SÚBITA (Shots > 5)
     else {
         gameState.final.suddenDeath = true;
+        
+        // CORRECCIÓN CRÍTICA:
+        // Solo verificamos ganador cuando AMBOS hayan tirado la misma cantidad (pares de tiros)
         if (shots1 === shots2) {
             if (score1 > score2) gameState.final.winner = p1.name;
             else if (score2 > score1) gameState.final.winner = p2.name;
@@ -194,7 +189,7 @@ function checkPenaltyWinner() {
 io.on("connection", (socket) => {
     socket.emit("phaseChanged", gameState.phase);
     socket.emit("playersUpdated", gameState.players);
-    if(gameState.phase === "questions") socket.emit("questionUpdate", questionsList[gameState.questionIndex]);
+    if(gameState.phase === "questions" && gameState.currentQuestion) socket.emit("questionUpdate", gameState.currentQuestion);
     broadcastState();
 
     socket.on("registerPlayer", (name) => {
@@ -218,6 +213,7 @@ io.on("connection", (socket) => {
             players: [], turnOrder: [], turnIndex: 0, round: 1, phase: "waiting",
             timer: ROUND_TIME_BASE,
             bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
+            currentQuestion: null, lastCategory: null,
             questionIndex: 0, stats: {}, votes: {}, detailedVotes: [],
             final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
         };
@@ -243,6 +239,8 @@ io.on("connection", (socket) => {
             
             setTimeout(() => {
                 gameState.phase = "penalty";
+                // Generar primera pregunta para penales
+                getNextRandomQuestion();
                 broadcastState();
             }, 4000);
             return;
@@ -254,7 +252,11 @@ io.on("connection", (socket) => {
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             gameState.bank.roundTotal = 0;
-            io.emit("questionUpdate", questionsList[gameState.questionIndex]);
+            
+            // Generar primera pregunta aleatoria
+            getNextRandomQuestion();
+            io.emit("questionUpdate", gameState.currentQuestion);
+            
             startTimer();
         } 
         else if (phase === "voting") {
@@ -277,9 +279,18 @@ io.on("connection", (socket) => {
             const isP1 = gameState.final.turn === 0;
             if (isP1) gameState.final.p1.history.push(true);
             else gameState.final.p2.history.push(true);
+            
+            // Checar ganador ANTES de cambiar turno
             checkPenaltyWinner();
+            
+            // Si ya hubo ganador tras el chequeo, no generar nueva pregunta ni cambiar turno
+            if (gameState.final.winner) {
+                broadcastState();
+                return;
+            }
+
             gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
-            gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
+            getNextRandomQuestion();
             broadcastState();
             return;
         }
@@ -306,7 +317,7 @@ io.on("connection", (socket) => {
             gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
         }
         
-        gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
+        getNextRandomQuestion();
         advanceTurn();
         broadcastState();
     });
@@ -317,9 +328,16 @@ io.on("connection", (socket) => {
             const isP1 = gameState.final.turn === 0;
             if (isP1) gameState.final.p1.history.push(false);
             else gameState.final.p2.history.push(false);
+            
             checkPenaltyWinner();
+            
+            if (gameState.final.winner) {
+                broadcastState();
+                return;
+            }
+            
             gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
-            gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
+            getNextRandomQuestion();
             broadcastState();
             return;
         }
@@ -329,7 +347,8 @@ io.on("connection", (socket) => {
         
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
-        gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
+        
+        getNextRandomQuestion();
         advanceTurn();
         broadcastState();
     });
