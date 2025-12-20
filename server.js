@@ -211,33 +211,26 @@ io.on("connection", (socket) => {
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].correct++;
         
-        // --- CORRECCIÓN PUNTO 1: Auto-Banca al completar escalera ---
+        // --- CORRECCIÓN PUNTO 1: Lógica Exacta de Escalera ---
         if (isNaN(gameState.bank.chainIndex)) gameState.bank.chainIndex = -1;
-        const maxIndex = CHAIN_VALUES.length - 1; // Index 6 (Valor 100)
-        
-        // Si estamos en el Index 5 ($50) y acertamos, llegamos al tope ($100)
-        // El usuario quiere que se guarde AUTOMÁTICAMENTE
-        if (gameState.bank.chainIndex >= maxIndex - 1) {
+        const maxIndex = CHAIN_VALUES.length - 1; // Índice 6 es $100
+
+        // Si YA estamos en el tope ($100) y acertamos:
+        if (gameState.bank.chainIndex === maxIndex) {
             const maxVal = CHAIN_VALUES[maxIndex]; // $100
             
-            // Sumar al banco total
+            // AUTO BANK: Sumar $100 y resetear
             gameState.bank.total += maxVal;
-            
-            // Estadísticas jugador
             if (gameState.stats[player]) {
                 gameState.stats[player].bankAmount += maxVal;
                 gameState.stats[player].bankCount++;
             }
-            
-            // REINICIAR ESCALERA
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
-            
-            // Sonido de éxito
             io.emit("bankSuccess");
-            
+        
         } else {
-            // Subir normal
+            // Si no estamos en el tope, SUBIR
             gameState.bank.chainIndex++;
             gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
         }
