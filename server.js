@@ -21,6 +21,7 @@ let gameState = {
     players: [],
     turnOrder: [],
     turnIndex: 0,
+    timer: INITIAL_ROUND_TIME,
     round: 1,
     phase: "waiting", 
     timer: INITIAL_ROUND_TIME,
@@ -296,3 +297,4 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
