@@ -19,7 +19,9 @@ const questionsList = [
     { question: "¿Color de la esperanza?", answer: "Verde" },
     { question: "¿Moneda de Japón?", answer: "Yen" },
     { question: "¿Patas de una araña?", answer: "Ocho" },
-    { question: "¿Metal precioso amarillo?", answer: "Oro" }
+    { question: "¿Metal precioso amarillo?", answer: "Oro" },
+    { question: "¿Cuál es el océano más grande?", answer: "Pacífico" },
+    { question: "¿Cuántos años tiene un siglo?", answer: "100" }
 ];
 
 // CONFIGURACIÓN
@@ -88,7 +90,8 @@ const checkVotingResults = () => {
     const activeVoters = gameState.players.length;
     const votesCast = gameState.detailedVotes.length;
 
-    if (votesCast >= activeVoters) {
+    // Solo checar si hay votantes activos
+    if (activeVoters > 0 && votesCast >= activeVoters) {
         let counts = {};
         gameState.detailedVotes.forEach(v => { counts[v.target] = (counts[v.target] || 0) + 1; });
 
@@ -151,13 +154,13 @@ io.on("connection", (socket) => {
             startTimer();
         } else if (phase === "voting") {
             clearInterval(timerInterval);
-            
-            // PUNTO 2: Reiniciar escalera al entrar a votación
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             
+            // Limpiar votos para la nueva votación
             gameState.votes = {};
             gameState.detailedVotes = [];
+            
             io.emit("votesUpdated", { summary: {}, details: [] });
             io.emit("votingResult", null);
         } else {
@@ -172,7 +175,6 @@ io.on("connection", (socket) => {
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].correct++;
         
-        // Auto-Banca al máximo
         const maxIndex = CHAIN_VALUES.length - 1;
         if (gameState.bank.chainIndex === maxIndex - 1) {
             const maxVal = CHAIN_VALUES[maxIndex];
@@ -224,6 +226,7 @@ io.on("connection", (socket) => {
 
     socket.on("vote", (target) => {
         const voterName = playerSockets[socket.id];
+        // Validar que el votante siga en el juego
         if (voterName && gameState.players.includes(voterName)) {
             const alreadyVoted = gameState.detailedVotes.find(v => v.voter === voterName);
             if (alreadyVoted) return;
@@ -241,6 +244,8 @@ io.on("connection", (socket) => {
         gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
         if (gameState.turnIndex >= gameState.turnOrder.length) gameState.turnIndex = 0;
         
+        // --- PUNTO 4: CORRECCIÓN DE FLUJO ---
+        // Limpiar votos inmediatamente para que no afecten la siguiente ronda
         gameState.votes = {};
         gameState.detailedVotes = [];
         
@@ -252,6 +257,7 @@ io.on("connection", (socket) => {
         } else {
              gameState.round++;
              gameState.phase = "waiting"; 
+             // Al cambiar a waiting, el Host deberá dar click en "Preguntas" para iniciar la siguiente ronda
              broadcastState();
         }
     });
