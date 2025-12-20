@@ -80,8 +80,8 @@
             <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
             <button id="btnPhaseQ" class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
             <button id="btnPhaseVote" class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
-            <button id="btnPhasePen" class="btn" style="background: linear-gradient(45deg, #FFD700, #DAA520); color:black; margin-top:10px;" onclick="setPhase('penalty')">🏆 GRAN FINAL</button>
             <button id="btnPhaseElim" class="btn btn-danger" onclick="setPhase('elimination')">☠ ELIMINACIÓN</button>
+            <button id="btnPhasePen" class="btn" style="background: linear-gradient(45deg, #FFD700, #DAA520); color:black; margin-top:10px;" onclick="setPhase('penalty')">🏆 GRAN FINAL</button>
             
             <div style="margin-top: 20px;">
                 <small style="color:#888">RONDA</small>
@@ -159,7 +159,9 @@
             btnQ: document.getElementById('btnPhaseQ'),
             btnVote: document.getElementById('btnPhaseVote'),
             btnElim: document.getElementById('btnPhaseElim'),
-            gameBtns: [document.getElementById('btnWrong'), document.getElementById('btnBank'), document.getElementById('btnCorrect')]
+            btnPen: document.getElementById('btnPhasePen'),
+            gameBtns: [document.getElementById('btnWrong'), document.getElementById('btnBank'), document.getElementById('btnCorrect')],
+            btnBankOnly: document.getElementById('btnBank')
         };
 
         function setPhase(p) { socket.emit('setPhase', p); }
@@ -172,11 +174,13 @@
         socket.on('timerUpdate', t => els.timer.innerText = t);
         
         socket.on('phaseChanged', phase => {
-            [els.btnWait, els.btnQ, els.btnVote, els.btnElim].forEach(b => {
+            // Limpieza
+            [els.btnWait, els.btnQ, els.btnVote, els.btnElim, els.btnPen].forEach(b => {
                 b.classList.remove('active', 'btn-next-step');
                 b.disabled = false;
             });
-
+            
+            // Gestionar vista central
             if(phase === 'voting' || phase === 'times_up') {
                 els.qArea.style.display = 'none';
                 els.vArea.style.display = 'block';
@@ -187,6 +191,7 @@
                 els.alertTie.style.display = 'none';
             }
 
+            // --- Lógica de Botones y Estados ---
             if (phase === 'waiting') {
                 els.btnWait.classList.add('active');
                 els.btnQ.classList.add('btn-next-step');
@@ -209,6 +214,14 @@
                 els.btnQ.classList.add('btn-next-step');
                 els.btnVote.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = true);
+            }
+            // CORRECCIÓN PUNTO 2: Reactivar botones en Penales
+            else if (phase === 'penalty') {
+                els.btnPen.classList.add('active');
+                // Habilitar Bien y Mal
+                els.gameBtns.forEach(b => b.disabled = false);
+                // Deshabilitar solo la Banca (porque no se usa en penales)
+                els.btnBankOnly.disabled = true;
             }
         });
 
@@ -283,4 +296,3 @@
     </script>
 </body>
 </html>
-
