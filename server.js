@@ -2,7 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
-// IMPORTAR PREGUNTAS DESDE ARCHIVO EXTERNO
+// 1. IMPORTAR PREGUNTAS DESDE EL ARCHIVO EXTERNO
 const questionsList = require('./questions');
 
 const app = express();
@@ -11,8 +11,10 @@ const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(express.static(__dirname));
 
-// CONFIGURACIÓN
-const ROUND_TIME_BASE = 20; 
+// --- CONFIGURACIÓN DE TIEMPOS Y CADENA ---
+const INITIAL_ROUND_TIME = 180; // 3 minutos (180 segundos)
+const TIME_REDUCTION_PER_ROUND = 10; 
+const FINAL_DUEL_TIME = 90;    // 1:30 minutos (90 segundos) para los últimos 2
 const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; 
 
 let gameState = {
@@ -21,37 +23,30 @@ let gameState = {
     turnIndex: 0,
     round: 1,
     phase: "waiting", 
-    timer: ROUND_TIME_BASE,
+    timer: INITIAL_ROUND_TIME,
     bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
     
-    // Manejo de preguntas aleatorias
+    // Manejo de preguntas
     currentQuestion: null,
     lastCategory: null,
     
     stats: {}, 
     votes: {}, 
     detailedVotes: [],
-    final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
+    final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false, turn: 0 }
 };
 
 let timerInterval = null;
 let playerSockets = {}; 
 
-// --- FUNCIÓN PARA OBTENER PREGUNTA ALEATORIA (SIN REPETIR CATEGORÍA) ---
+// --- LÓGICA DE PREGUNTAS ALEATORIAS ---
 function getNextRandomQuestion() {
-    // 1. Filtrar preguntas que NO sean de la misma categoría anterior
     let available = questionsList.filter(q => q.category !== gameState.lastCategory);
+    if (available.length === 0) available = questionsList;
     
-    // Si no hay preguntas disponibles (caso raro o solo queda 1 categoría), usar todas
-    if (available.length === 0) {
-        available = questionsList;
-    }
-    
-    // 2. Elegir una al azar
     const randomIndex = Math.floor(Math.random() * available.length);
     const selected = available[randomIndex];
     
-    // 3. Actualizar última categoría
     gameState.lastCategory = selected.category;
     gameState.currentQuestion = selected;
     
@@ -79,11 +74,6 @@ const broadcastState = () => {
     io.emit("phaseChanged", gameState.phase);
     io.emit("roundUpdate", gameState.round);
     
-    if (typeof gameState.bank.chainIndex !== 'number' || isNaN(gameState.bank.chainIndex)) {
-        gameState.bank.chainIndex = -1;
-        gameState.bank.currentValue = 0;
-    }
-
     io.emit("bankState", { 
         chain: CHAIN_VALUES, 
         chainIndex: gameState.bank.chainIndex, 
@@ -114,64 +104,26 @@ const updateRanking = () => {
     io.emit("rankingUpdate", ranking);
 };
 
-const checkVotingResults = () => {
-    const activeVoters = gameState.players.length;
-    const votesCast = gameState.detailedVotes.length;
-
-    if (activeVoters > 0 && votesCast >= activeVoters) {
-        let counts = {};
-        gameState.detailedVotes.forEach(v => { counts[v.target] = (counts[v.target] || 0) + 1; });
-
-        let maxVotes = 0;
-        let candidates = [];
-        for (const [player, count] of Object.entries(counts)) {
-            if (count > maxVotes) { maxVotes = count; candidates = [player]; } 
-            else if (count === maxVotes) { candidates.push(player); }
-        }
-
-        if (candidates.length === 1) {
-            io.emit("votingResult", { type: "clear", target: candidates[0], count: maxVotes });
-        } else {
-            io.emit("votingResult", { type: "tie", targets: candidates, count: maxVotes, decisionMaker: getStrongestPlayerName() });
-        }
-    }
-};
-
-// --- CORRECCIÓN LÓGICA DE PENALES ---
 function checkPenaltyWinner() {
     const p1 = gameState.final.p1;
     const p2 = gameState.final.p2;
-    
     const score1 = p1.history.filter(x => x === true).length;
     const score2 = p2.history.filter(x => x === true).length;
-    
     const shots1 = p1.history.length;
     const shots2 = p2.history.length;
     
-    // 1. FASE REGULAR (Mejor de 5)
-    // Solo declaramos ganador si matemáticamente el otro NO puede alcanzarlo
-    // PERO: Si van 5 tiros exactos cada uno, se define por score.
-    
-    if (shots1 <= 5 || shots2 <= 5) {
+    if (shots1 <= 5 && shots2 <= 5) {
         const remaining1 = 5 - shots1;
         const remaining2 = 5 - shots2;
         
-        // P1 ya ganó (P2 no lo alcanza ni acertando todo lo que le falta)
         if (score1 > score2 + remaining2) gameState.final.winner = p1.name;
-        // P2 ya ganó
         else if (score2 > score1 + remaining1) gameState.final.winner = p2.name;
-        
-        // Empate al final de los 5 tiros -> Activar Muerte Súbita
         else if (shots1 === 5 && shots2 === 5 && score1 === score2) {
             gameState.final.suddenDeath = true;
         }
-    }
-    // 2. MUERTE SÚBITA (Shots > 5)
+    } 
     else {
         gameState.final.suddenDeath = true;
-        
-        // CORRECCIÓN CRÍTICA:
-        // Solo verificamos ganador cuando AMBOS hayan tirado la misma cantidad (pares de tiros)
         if (shots1 === shots2) {
             if (score1 > score2) gameState.final.winner = p1.name;
             else if (score2 > score1) gameState.final.winner = p2.name;
@@ -179,233 +131,27 @@ function checkPenaltyWinner() {
     }
 
     if (gameState.final.winner) {
-        io.emit("finalWinner", { 
-            name: gameState.final.winner, 
-            amount: gameState.bank.total 
-        });
+        io.emit("finalWinner", { name: gameState.final.winner, amount: gameState.bank.total });
     }
 }
 
-io.on("connection", (socket) => {
-    socket.emit("phaseChanged", gameState.phase);
-    socket.emit("playersUpdated", gameState.players);
-    if(gameState.phase === "questions" && gameState.currentQuestion) socket.emit("questionUpdate", gameState.currentQuestion);
-    broadcastState();
-
-    socket.on("registerPlayer", (name) => {
-        const cleanName = name.trim().toUpperCase();
-        if (!gameState.players.includes(cleanName)) {
-            gameState.players.push(cleanName);
-            gameState.turnOrder.push(cleanName);
-            playerSockets[socket.id] = cleanName;
-            gameState.stats[cleanName] = { correct: 0, wrong: 0, bankAmount: 0, bankCount: 0 };
-            io.emit("playersUpdated", gameState.players);
-            updateRanking();
-        } else {
-             playerSockets[socket.id] = cleanName; 
-             io.emit("playersUpdated", gameState.players);
-        }
-    });
-
-    socket.on("resetGame", () => {
-        clearInterval(timerInterval);
-        gameState = {
-            players: [], turnOrder: [], turnIndex: 0, round: 1, phase: "waiting",
-            timer: ROUND_TIME_BASE,
-            bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
-            currentQuestion: null, lastCategory: null,
-            questionIndex: 0, stats: {}, votes: {}, detailedVotes: [],
-            final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
-        };
-        playerSockets = {};
-        io.emit("gameReset");
-        io.emit("playersUpdated", []); 
-        broadcastState();
-    });
-
-    socket.on("setPhase", (phase) => {
-        if (phase === "penalty") {
-            gameState.final.active = true;
-            if(gameState.players.length >= 2) {
-                gameState.final.p1 = { name: gameState.players[0], history: [] };
-                gameState.final.p2 = { name: gameState.players[1], history: [] };
-            }
-            gameState.final.turn = 0; 
-            gameState.final.winner = null;
-            gameState.final.suddenDeath = false;
-            
-            gameState.phase = "final_intro";
-            broadcastState();
-            
-            setTimeout(() => {
-                gameState.phase = "penalty";
-                // Generar primera pregunta para penales
-                getNextRandomQuestion();
-                broadcastState();
-            }, 4000);
-            return;
-        }
-
-        gameState.phase = phase;
-        
-        if (phase === "questions") {
-            gameState.bank.chainIndex = -1;
-            gameState.bank.currentValue = 0;
-            gameState.bank.roundTotal = 0;
-            
-            // Generar primera pregunta aleatoria
-            getNextRandomQuestion();
-            io.emit("questionUpdate", gameState.currentQuestion);
-            
-            startTimer();
-        } 
-        else if (phase === "voting") {
-            clearInterval(timerInterval);
-            gameState.bank.chainIndex = -1;
-            gameState.bank.currentValue = 0;
-            gameState.votes = {};
-            gameState.detailedVotes = [];
-            io.emit("votesUpdated", { summary: {}, details: [] });
-            io.emit("votingResult", null);
-        } else {
-            clearInterval(timerInterval);
-        }
-        broadcastState();
-    });
-
-    socket.on("correctAnswer", () => {
-        if (gameState.phase === "penalty") {
-            if (gameState.final.winner) return;
-            const isP1 = gameState.final.turn === 0;
-            if (isP1) gameState.final.p1.history.push(true);
-            else gameState.final.p2.history.push(true);
-            
-            // Checar ganador ANTES de cambiar turno
-            checkPenaltyWinner();
-            
-            // Si ya hubo ganador tras el chequeo, no generar nueva pregunta ni cambiar turno
-            if (gameState.final.winner) {
-                broadcastState();
-                return;
-            }
-
-            gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
-            getNextRandomQuestion();
-            broadcastState();
-            return;
-        }
-
-        const player = getCurrentPlayer();
-        if (gameState.stats[player]) gameState.stats[player].correct++;
-        
-        if (isNaN(gameState.bank.chainIndex)) gameState.bank.chainIndex = -1;
-        const maxIndex = CHAIN_VALUES.length - 1; 
-
-        if (gameState.bank.chainIndex === maxIndex) {
-            const maxVal = CHAIN_VALUES[maxIndex]; 
-            gameState.bank.total += maxVal;
-            gameState.bank.roundTotal += maxVal;
-            if (gameState.stats[player]) {
-                gameState.stats[player].bankAmount += maxVal;
-                gameState.stats[player].bankCount++;
-            }
-            gameState.bank.chainIndex = -1;
-            gameState.bank.currentValue = 0;
-            io.emit("bankSuccess");
-        } else {
-            gameState.bank.chainIndex++;
-            gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
-        }
-        
-        getNextRandomQuestion();
-        advanceTurn();
-        broadcastState();
-    });
-
-    socket.on("wrongAnswer", () => {
-        if (gameState.phase === "penalty") {
-            if (gameState.final.winner) return;
-            const isP1 = gameState.final.turn === 0;
-            if (isP1) gameState.final.p1.history.push(false);
-            else gameState.final.p2.history.push(false);
-            
-            checkPenaltyWinner();
-            
-            if (gameState.final.winner) {
-                broadcastState();
-                return;
-            }
-            
-            gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
-            getNextRandomQuestion();
-            broadcastState();
-            return;
-        }
-
-        const player = getCurrentPlayer();
-        if (gameState.stats[player]) gameState.stats[player].wrong++;
-        
-        gameState.bank.chainIndex = -1;
-        gameState.bank.currentValue = 0;
-        
-        getNextRandomQuestion();
-        advanceTurn();
-        broadcastState();
-    });
-
-    socket.on("bank", () => {
-        if (gameState.bank.currentValue > 0) {
-            gameState.bank.total += gameState.bank.currentValue;
-            gameState.bank.roundTotal += gameState.bank.currentValue;
-            const player = getCurrentPlayer();
-            if (gameState.stats[player]) {
-                gameState.stats[player].bankAmount += gameState.bank.currentValue;
-                gameState.stats[player].bankCount++;
-            }
-            gameState.bank.chainIndex = -1;
-            gameState.bank.currentValue = 0;
-            broadcastState();
-            io.emit("bankSuccess");
-        }
-    });
-
-    socket.on("vote", (target) => {
-        const voterName = playerSockets[socket.id];
-        if (voterName && gameState.players.includes(voterName)) {
-            const alreadyVoted = gameState.detailedVotes.find(v => v.voter === voterName);
-            if (alreadyVoted) return;
-            gameState.votes[target] = (gameState.votes[target] || 0) + 1;
-            gameState.detailedVotes.push({ voter: voterName, target: target });
-            io.emit("votesUpdated", { summary: gameState.votes, details: gameState.detailedVotes });
-            checkVotingResults();
-        }
-    });
-
-    socket.on("eliminatePlayer", (name) => {
-        gameState.players = gameState.players.filter(p => p !== name);
-        gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
-        if (gameState.turnIndex >= gameState.turnOrder.length) gameState.turnIndex = 0;
-        
-        gameState.votes = {};
-        gameState.detailedVotes = [];
-        io.emit("playerEliminated", name);
-        io.emit("playersUpdated", gameState.players);
-        
-        gameState.round++;
-        gameState.phase = "waiting"; 
-        broadcastState();
-    });
-});
-
-function advanceTurn() {
-    if (gameState.turnOrder.length === 0) return;
-    gameState.turnIndex = (gameState.turnIndex + 1) % gameState.turnOrder.length;
-}
-
+// --- LÓGICA DEL TIMER CORREGIDA ---
 function startTimer() {
     clearInterval(timerInterval);
-    gameState.timer = Math.max(10, ROUND_TIME_BASE - ((gameState.round - 1) * 2));
+
+    // Si quedan exactamente 2 jugadores, el tiempo es 1:30
+    if (gameState.players.length === 2) {
+        gameState.timer = FINAL_DUEL_TIME;
+    } else {
+        // Tiempo inicial (180s) menos 10s por cada ronda transcurrida
+        gameState.timer = INITIAL_ROUND_TIME - ((gameState.round - 1) * TIME_REDUCTION_PER_ROUND);
+    }
+
+    // Mínimo de seguridad para que el tiempo no desaparezca en rondas muy avanzadas
+    if (gameState.timer < 30) gameState.timer = 30;
+
     io.emit("timerUpdate", gameState.timer);
+
     timerInterval = setInterval(() => {
         gameState.timer--;
         io.emit("timerUpdate", gameState.timer);
@@ -417,5 +163,136 @@ function startTimer() {
     }, 1000);
 }
 
+// --- SOCKETS ---
+io.on("connection", (socket) => {
+    socket.emit("phaseChanged", gameState.phase);
+    socket.emit("playersUpdated", gameState.players);
+    broadcastState();
+
+    socket.on("registerPlayer", (name) => {
+        const cleanName = name.trim().toUpperCase();
+        if (!gameState.players.includes(cleanName)) {
+            gameState.players.push(cleanName);
+            gameState.turnOrder.push(cleanName);
+            playerSockets[socket.id] = cleanName;
+            gameState.stats[cleanName] = { correct: 0, wrong: 0, bankAmount: 0, bankCount: 0 };
+            io.emit("playersUpdated", gameState.players);
+        }
+    });
+
+    socket.on("resetGame", () => {
+        clearInterval(timerInterval);
+        gameState = {
+            players: [], turnOrder: [], turnIndex: 0, round: 1, phase: "waiting",
+            timer: INITIAL_ROUND_TIME,
+            bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
+            currentQuestion: null, lastCategory: null, stats: {}, votes: {}, detailedVotes: [],
+            final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false, turn: 0 }
+        };
+        io.emit("gameReset");
+        broadcastState();
+    });
+
+    socket.on("setPhase", (phase) => {
+        if (phase === "penalty") {
+            gameState.final.active = true;
+            gameState.final.p1 = { name: gameState.players[0], history: [] };
+            gameState.final.p2 = { name: gameState.players[1], history: [] };
+            gameState.final.turn = 0; 
+            gameState.final.winner = null;
+            gameState.final.suddenDeath = false;
+            gameState.phase = "final_intro";
+            broadcastState();
+            setTimeout(() => {
+                gameState.phase = "penalty";
+                getNextRandomQuestion();
+                broadcastState();
+            }, 4000);
+            return;
+        }
+
+        gameState.phase = phase;
+        if (phase === "questions") {
+            gameState.bank.chainIndex = -1;
+            gameState.bank.currentValue = 0;
+            gameState.bank.roundTotal = 0;
+            getNextRandomQuestion();
+            startTimer();
+        } else {
+            clearInterval(timerInterval);
+        }
+        broadcastState();
+    });
+
+    socket.on("correctAnswer", () => {
+        if (gameState.phase === "penalty") {
+            if (gameState.final.winner) return;
+            gameState.final.turn === 0 ? gameState.final.p1.history.push(true) : gameState.final.p2.history.push(true);
+            checkPenaltyWinner();
+            if (!gameState.final.winner) {
+                gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
+                getNextRandomQuestion();
+            }
+            broadcastState();
+            return;
+        }
+        const player = getCurrentPlayer();
+        if (gameState.stats[player]) gameState.stats[player].correct++;
+        
+        const maxIndex = CHAIN_VALUES.length - 1;
+        if (gameState.bank.chainIndex === maxIndex) {
+            gameState.bank.total += CHAIN_VALUES[maxIndex];
+            gameState.bank.roundTotal += CHAIN_VALUES[maxIndex];
+            gameState.bank.chainIndex = -1;
+            gameState.bank.currentValue = 0;
+        } else {
+            gameState.bank.chainIndex++;
+            gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
+        }
+        getNextRandomQuestion();
+        gameState.turnIndex++;
+        broadcastState();
+    });
+
+    socket.on("wrongAnswer", () => {
+        if (gameState.phase === "penalty") {
+            if (gameState.final.winner) return;
+            gameState.final.turn === 0 ? gameState.final.p1.history.push(false) : gameState.final.p2.history.push(false);
+            checkPenaltyWinner();
+            if (!gameState.final.winner) {
+                gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
+                getNextRandomQuestion();
+            }
+            broadcastState();
+            return;
+        }
+        const player = getCurrentPlayer();
+        if (gameState.stats[player]) gameState.stats[player].wrong++;
+        gameState.bank.chainIndex = -1;
+        gameState.bank.currentValue = 0;
+        getNextRandomQuestion();
+        gameState.turnIndex++;
+        broadcastState();
+    });
+
+    socket.on("bank", () => {
+        if (gameState.bank.currentValue > 0) {
+            gameState.bank.total += gameState.bank.currentValue;
+            gameState.bank.roundTotal += gameState.bank.currentValue;
+            gameState.bank.chainIndex = -1;
+            gameState.bank.currentValue = 0;
+            broadcastState();
+        }
+    });
+
+    socket.on("eliminatePlayer", (name) => {
+        gameState.players = gameState.players.filter(p => p !== name);
+        gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
+        gameState.round++;
+        gameState.phase = "waiting"; 
+        broadcastState();
+    });
+});
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
