@@ -32,6 +32,9 @@
         .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; position: relative; z-index: 50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
         .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
+        
+        /* ESTILO PREGUNTA EN PANTALLA JUGADOR */
+        .player-question-box { width: 90%; margin-top: 10px; padding: 10px; text-align: center; color: #aaa; font-size: 0.9rem; border-bottom: 1px solid #333; display: none; /* Se activa con JS si se quiere mostrar */ }
 
         #ladderContainer { flex:1; display:flex; flex-direction: column-reverse; justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; overflow-y: auto; }
         .step { width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; display: flex; justify-content: center; align-items: center; }
@@ -90,12 +93,8 @@
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes pulse { 0%{opacity:0.8} 50%{opacity:1} 100%{opacity:0.8} }
         
-        @keyframes introReveal { 
-            to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } 
-        }
-        @keyframes winnerPulse { 
-            to { transform:scale(1.05); text-shadow:0 0 40px var(--primary); } 
-        }
+        @keyframes introReveal { to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } }
+        @keyframes winnerPulse { to { transform:scale(1.05); text-shadow:0 0 40px var(--primary); } }
     </style>
 </head>
 <body>
@@ -104,6 +103,7 @@
         <div class="header-info">
             <div class="app-title">EL RIVAL MÁS DÉBIL</div>
             <div id="headerSubTitle" class="app-subtitle">Bienvenido al juego</div>
+            <div id="playerQBox" class="player-question-box"></div>
         </div>
         <div id="miniTimer" class="header-timer">20</div>
     </header>
@@ -213,6 +213,7 @@
             vGrid: document.getElementById('votingGrid'),
             introName: document.getElementById('intro1'),
             headerSub: document.getElementById('headerSubTitle'),
+            playerQBox: document.getElementById('playerQBox'), // Contenedor de pregunta
             miniTimer: document.getElementById('miniTimer'),
             elimMsg: document.getElementById('elimMsg'),
             p1Name: document.getElementById('penP1Name'),
@@ -244,6 +245,7 @@
         }
 
         function renderPhase(phase) {
+            // Ocultar overlays temporales
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
             els.introFinal.style.display = 'none';
@@ -252,9 +254,18 @@
             els.game.classList.remove('active');
             els.penalty.classList.remove('active');
 
+            // --- CORRECCIÓN: INTRO FINAL TIENE PRIORIDAD SOBRE ELIMINADOS ---
+            if (phase === 'final_intro') {
+                // Forzamos mostrar pantalla de penales de fondo (o juego) pero con el overlay
+                els.penalty.classList.add('active');
+                els.introFinal.style.display = 'flex';
+                return; // Cortamos ejecución para que el estado de eliminado no lo oculte
+            }
+
             if (isEliminated) {
-                 if(phase === 'penalty' || phase === 'final_intro') els.penalty.classList.add('active');
+                 if(phase === 'penalty') els.penalty.classList.add('active');
                  else els.game.classList.add('active');
+                 
                  if(phase === 'waiting') {
                     els.waitOver.style.display = 'flex';
                     els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
@@ -262,11 +273,8 @@
                 return; 
             }
 
-            if (phase === 'penalty' || phase === 'final_intro') {
+            if (phase === 'penalty') {
                 els.penalty.classList.add('active');
-                if (phase === 'final_intro') {
-                     els.introFinal.style.display = 'flex';
-                }
                 return;
             }
 
@@ -309,7 +317,7 @@
             } 
             else if (els.penalty.classList.contains('active') && !isEliminated) {
                 els.loserFinal.style.display = 'flex';
-                // MENSAJE CORREGIDO PARA PERDEDOR
+                // MENSAJE AJUSTADO
                 els.lMsg.innerHTML = `${myName},<br>GRACIAS POR PARTICIPAR.<br>PERO HAS PERDIDO EN LA FINAL DE<br><span style="color:var(--primary); font-weight:bold;">EL RIVAL MÁS DÉBIL</span>`;
             } 
             else {
@@ -355,6 +363,16 @@
             if(!isEliminated && (els.waitMsg.innerText.includes("Esperando") || els.waitMsg.innerText.includes("Atención"))) {
                 els.waitMsg.innerText = `Esperando comenzar RONDA ${r}`;
             }
+        });
+
+        socket.on('questionUpdate', q => { 
+            // OPCIONAL: Mostrar pregunta en pantalla de jugador si quieres
+            // if(q) {
+            //    els.playerQBox.style.display = 'block';
+            //    els.playerQBox.innerHTML = `En <b style="color:var(--primary)">${q.category}</b><br>${q.question}`;
+            // } else {
+            //    els.playerQBox.style.display = 'none';
+            // }
         });
 
         socket.on('bankState', state => {
