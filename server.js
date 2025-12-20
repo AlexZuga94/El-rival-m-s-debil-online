@@ -40,14 +40,27 @@ let gameState = {
     stats: {}, 
     votes: {}, 
     detailedVotes: [],
-    final: { active: false, p1: null, p2: null, winner: null, suddenDeath: false }
+    // NUEVO: OBJETO PARA LA FINAL
+    final: { 
+        active: false, 
+        p1: null, // { name: "JUAN", history: [true, false, true...] }
+        p2: null, 
+        turn: 0, // 0 para p1, 1 para p2
+        winner: null 
+    }
 };
 
 let timerInterval = null;
 let playerSockets = {}; 
 
-const getCurrentPlayer = () => gameState.turnOrder[gameState.turnIndex % gameState.turnOrder.length] || "Nadie";
+const getCurrentPlayer = () => {
+    if (gameState.phase === 'penalty') {
+        return gameState.final.turn === 0 ? gameState.final.p1.name : gameState.final.p2.name;
+    }
+    return gameState.turnOrder[gameState.turnIndex % gameState.turnOrder.length] || "Nadie";
+};
 
+// ... (getStrongestPlayerName se mantiene igual) ...
 const getStrongestPlayerName = () => {
     if (gameState.players.length === 0) return null;
     const sorted = [...gameState.players].sort((a, b) => {
@@ -62,7 +75,6 @@ const broadcastState = () => {
     io.emit("phaseChanged", gameState.phase);
     io.emit("roundUpdate", gameState.round);
     
-    // --- SEGURIDAD: Asegurar que chainIndex sea un número válido antes de enviar ---
     if (typeof gameState.bank.chainIndex !== 'number' || isNaN(gameState.bank.chainIndex)) {
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
@@ -77,7 +89,12 @@ const broadcastState = () => {
     io.emit("turnUpdate", getCurrentPlayer());
     updateRanking();
     
-    if(gameState.phase === "questions") {
+    // Enviar estado de la final si es necesario
+    if (gameState.final.active) {
+        io.emit("finalState", gameState.final);
+    }
+    
+    if(gameState.phase === "questions" || gameState.phase === "penalty") {
         io.emit("questionUpdate", questionsList[gameState.questionIndex]);
     }
 };
@@ -93,6 +110,7 @@ const updateRanking = () => {
     io.emit("rankingUpdate", ranking);
 };
 
+// ... (checkVotingResults se mantiene igual) ...
 const checkVotingResults = () => {
     const activeVoters = gameState.players.length;
     const votesCast = gameState.detailedVotes.length;
@@ -153,13 +171,23 @@ io.on("connection", (socket) => {
     });
 
     socket.on("setPhase", (phase) => {
+        // LÓGICA ESPECIAL PARA INICIAR PENALES
+        if (phase === "penalty") {
+            gameState.final.active = true;
+            // Configurar finalistas
+            gameState.final.p1 = { name: gameState.players[0], history: [] };
+            gameState.final.p2 = { name: gameState.players[1], history: [] };
+            gameState.final.turn = 0; // Empieza P1
+            gameState.phase = "penalty";
+            broadcastState();
+            return;
+        }
+
         gameState.phase = phase;
         
         if (phase === "questions") {
-            // REINICIO FORZADO DE ESCALERA AL INICIAR PREGUNTAS
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
-            
             io.emit("questionUpdate", questionsList[gameState.questionIndex]);
             startTimer();
         } 
@@ -167,7 +195,6 @@ io.on("connection", (socket) => {
             clearInterval(timerInterval);
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
-            
             gameState.votes = {};
             gameState.detailedVotes = [];
             io.emit("votesUpdated", { summary: {}, details: [] });
@@ -179,18 +206,28 @@ io.on("connection", (socket) => {
     });
 
     socket.on("correctAnswer", () => {
-        if (gameState.final.active) { handleFinalAnswer(true); return; }
-        
+        // --- LÓGICA DE PENALES ---
+        if (gameState.phase === "penalty") {
+            const isP1 = gameState.final.turn === 0;
+            if (isP1) gameState.final.p1.history.push(true); // true = acierto
+            else gameState.final.p2.history.push(true);
+            
+            // Cambio de turno
+            gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
+            
+            gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
+            broadcastState();
+            checkWinner(); // Verificar si ya ganó alguien
+            return;
+        }
+
+        // Lógica normal...
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].correct++;
         
-        // --- LÓGICA DE ESCALERA BLINDADA ---
-        // Asegurar que chainIndex sea válido
         if (isNaN(gameState.bank.chainIndex)) gameState.bank.chainIndex = -1;
-
         const maxIndex = CHAIN_VALUES.length - 1;
         
-        // Si ya estamos en el penúltimo paso y acertamos -> AUTO BANK
         if (gameState.bank.chainIndex === maxIndex - 1) {
             const maxVal = CHAIN_VALUES[maxIndex];
             gameState.bank.total += maxVal;
@@ -198,12 +235,10 @@ io.on("connection", (socket) => {
                 gameState.stats[player].bankAmount += maxVal;
                 gameState.stats[player].bankCount++;
             }
-            // Reset escalera
             gameState.bank.chainIndex = -1;
             gameState.bank.currentValue = 0;
             io.emit("bankSuccess");
         } else {
-            // Subir escalera normal
             if (gameState.bank.chainIndex < maxIndex) {
                 gameState.bank.chainIndex++;
                 gameState.bank.currentValue = CHAIN_VALUES[gameState.bank.chainIndex];
@@ -216,14 +251,25 @@ io.on("connection", (socket) => {
     });
 
     socket.on("wrongAnswer", () => {
-        if (gameState.final.active) { handleFinalAnswer(false); return; }
+        // --- LÓGICA DE PENALES ---
+        if (gameState.phase === "penalty") {
+            const isP1 = gameState.final.turn === 0;
+            if (isP1) gameState.final.p1.history.push(false); // false = error
+            else gameState.final.p2.history.push(false);
+            
+            gameState.final.turn = gameState.final.turn === 0 ? 1 : 0;
+            
+            gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
+            broadcastState();
+            checkWinner();
+            return;
+        }
+
+        // Lógica normal...
         const player = getCurrentPlayer();
         if (gameState.stats[player]) gameState.stats[player].wrong++;
-        
-        // Reset escalera por error
         gameState.bank.chainIndex = -1;
         gameState.bank.currentValue = 0;
-        
         gameState.questionIndex = (gameState.questionIndex + 1) % questionsList.length;
         advanceTurn();
         broadcastState();
@@ -249,10 +295,8 @@ io.on("connection", (socket) => {
         if (voterName && gameState.players.includes(voterName)) {
             const alreadyVoted = gameState.detailedVotes.find(v => v.voter === voterName);
             if (alreadyVoted) return;
-
             gameState.votes[target] = (gameState.votes[target] || 0) + 1;
             gameState.detailedVotes.push({ voter: voterName, target: target });
-            
             io.emit("votesUpdated", { summary: gameState.votes, details: gameState.detailedVotes });
             checkVotingResults();
         }
@@ -265,19 +309,29 @@ io.on("connection", (socket) => {
         
         gameState.votes = {};
         gameState.detailedVotes = [];
-        
         io.emit("playerEliminated", name);
         io.emit("playersUpdated", gameState.players);
         
-        if (gameState.players.length === 2) {
-             setupFinal();
-        } else {
-             gameState.round++;
-             gameState.phase = "waiting"; 
-             broadcastState();
-        }
+        // CORRECCIÓN: Si quedan 2, jugamos UNA RONDA MÁS antes de los penales
+        // Pero marcamos una variable interna si quisieras, o simplemente el Host lo sabe.
+        // Aquí seguimos la lógica normal: aumentamos ronda y a esperar.
+        // La diferencia es visual en el Host (ver Host.html).
+        
+        gameState.round++;
+        gameState.phase = "waiting"; 
+        broadcastState();
     });
 });
+
+function checkWinner() {
+    // Lógica simple de "Mejor de 5" o Muerte Súbita
+    // Solo emitimos si hay ganador, el cliente muestra el mensaje
+    // Para simplificar, el Host decidirá cuándo parar si es muy complejo,
+    // pero aquí calculamos score básico.
+    
+    // Puedes expandir esta función para automatizar el "Ganador Matemático"
+    // De momento, solo guardamos el estado y que el Host lo vea.
+}
 
 function advanceTurn() {
     if (gameState.turnOrder.length === 0) return;
@@ -297,26 +351,6 @@ function startTimer() {
             broadcastState();
         }
     }, 1000);
-}
-
-function setupFinal() {
-    gameState.final.active = true;
-    gameState.phase = "final_intro";
-    gameState.final.p1 = { name: gameState.players[0], score: 0, history: [] };
-    gameState.final.p2 = { name: gameState.players[1], score: 0, history: [] };
-    broadcastState();
-    io.emit("finalUpdate", gameState.final);
-}
-
-function handleFinalAnswer(isCorrect) {
-    const p = getCurrentPlayer();
-    const isP1 = p === gameState.final.p1.name;
-    const target = isP1 ? gameState.final.p1 : gameState.final.p2;
-    target.history.push(isCorrect);
-    if(isCorrect) target.score++;
-    io.emit("finalUpdate", gameState.final);
-    advanceTurn();
-    broadcastState();
 }
 
 const PORT = process.env.PORT || 3000;
