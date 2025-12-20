@@ -10,16 +10,34 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        header { padding:15px; text-align:center; border-bottom:1px solid #333; background:#0a0a0a; z-index:10; position: relative; }
-        .app-title { font-weight:900; font-size:1.8rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1; }
+        /* PUNTO 2: HEADER GRID PARA TIMER MÁS VISIBLE */
+        header { 
+            display: grid; 
+            grid-template-columns: 1fr auto; 
+            align-items: center; 
+            padding: 15px 20px; 
+            border-bottom: 1px solid #333; 
+            background: #0a0a0a; 
+            z-index: 10; 
+        }
+        
+        .header-info { display: flex; flex-direction: column; text-align: left; }
+        .app-title { font-weight:900; font-size:1.4rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1.1; }
         .app-subtitle { font-size: 0.9rem; color: #888; margin-top: 5px; font-weight: 300; }
         
-        .header-timer { position: absolute; top: 15px; right: 15px; font-size: 1.5rem; font-weight: bold; color: white; }
+        /* TIMER GRANDE Y A LA DERECHA */
+        .header-timer { 
+            font-size: 2.8rem; 
+            font-weight: 700; 
+            color: white; 
+            min-width: 80px; 
+            text-align: right; 
+            line-height: 1;
+        }
         .timer-warn { color: var(--accent); }
         .timer-crit { color: var(--danger); animation: pulse 0.5s infinite; }
 
-        /* PUNTO 7: Barra de Eliminado (Spectator Mode) */
-        #eliminatedBar { display:none; background: var(--danger); color: white; text-align: center; font-weight: bold; padding: 5px; animation: pulse 2s infinite; }
+        .highlight-name { color: var(--accent); font-weight: bold; }
 
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
@@ -35,10 +53,10 @@
 
         #gameScreen { padding-top:0px; justify-content: flex-start; }
         
-        /* PUNTO 3: Banco Arriba */
+        /* PUNTO 3: Banco Arriba y muy visible */
         .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; margin-top: 10px; }
-        .bank-total-label { font-size:0.8rem; color:#888; }
-        .bank-total-val { font-size:2.5rem; color:var(--accent); font-weight:bold; line-height: 1; }
+        .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
+        .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
 
         #ladderContainer { 
             flex:1; display:flex; flex-direction: column-reverse; 
@@ -46,12 +64,12 @@
         }
         
         .step { 
-            width:90%; padding:10px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; 
+            width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; 
             display: flex; justify-content: center; align-items: center; 
         }
         .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
 
-        .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:50; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
+        .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:50; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
         #votingGrid { display:grid; grid-template-columns:1fr 1fr; gap:15px; width:90%; margin-top:20px; }
         .vote-btn { padding:20px; background:#222; border:1px solid #444; color:white; font-weight:bold; font-size:1rem; border-radius:10px; }
@@ -60,6 +78,10 @@
         #timesUpScreen { background: rgba(200, 0, 0, 0.95); }
         .tu-icon { font-size: 5rem; animation: shake 0.5s infinite; }
         
+        #eliminatedScreen { background:rgba(0,0,0,0.98); }
+        .elim-icon { font-size:6rem; margin-bottom:20px; color: var(--danger); text-shadow: 0 0 30px var(--danger); }
+        .elim-text { font-size:1.8rem; font-weight:bold; color: white; line-height: 1.4; }
+
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes zoomGlow { to { opacity:1; transform:scale(1); text-shadow:0 0 40px var(--primary); } }
         @keyframes shake { 0%, 100% { transform:translateX(0); } 25% { transform:translateX(-5px); } 75% { transform:translateX(5px); } }
@@ -69,12 +91,12 @@
 <body>
 
     <header>
-        <div class="app-title">EL RIVAL MÁS DÉBIL</div>
-        <div id="headerSubTitle" class="app-subtitle">Bienvenido al juego</div>
+        <div class="header-info">
+            <div class="app-title">EL RIVAL MÁS DÉBIL</div>
+            <div id="headerSubTitle" class="app-subtitle">Bienvenido al juego</div>
+        </div>
         <div id="miniTimer" class="header-timer">20</div>
     </header>
-    
-    <div id="eliminatedBar">⛔ ESTÁS ELIMINADO (Modo Espectador)</div>
 
     <div id="loginScreen" class="screen active">
         <div class="login-box">
@@ -114,11 +136,17 @@
         <div id="votingGrid"></div>
     </div>
 
+    <div id="eliminatedScreen" class="overlay">
+        <div class="elim-icon">❌</div>
+        <div id="elimMsg" class="elim-text">Has sido eliminado.</div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
         let myName = "";
-        let isEliminated = false; // Estado local
+        let isEliminated = false;
+        let currentRound = 1;
         
         const els = {
             login: document.getElementById('loginScreen'),
@@ -126,6 +154,7 @@
             game: document.getElementById('gameScreen'),
             vote: document.getElementById('voteScreen'),
             timesUp: document.getElementById('timesUpScreen'),
+            elim: document.getElementById('eliminatedScreen'),
             
             ladder: document.getElementById('ladderContainer'),
             bank: document.getElementById('bankTotal'),
@@ -135,7 +164,7 @@
             introName: document.getElementById('intro1'),
             headerSub: document.getElementById('headerSubTitle'),
             miniTimer: document.getElementById('miniTimer'),
-            elimBar: document.getElementById('eliminatedBar')
+            elimMsg: document.getElementById('elimMsg')
         };
 
         function enterGame() {
@@ -143,7 +172,8 @@
             if(!name) return;
             myName = name;
             socket.emit('registerPlayer', name);
-            els.headerSub.innerHTML = `<span class=\"highlight-name\">${myName}</span> estás jugando a El Rival más Débil`;
+            // PUNTO 5: Coma y Color
+            els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, estás jugando a El Rival más Débil`;
 
             els.login.classList.remove('active');
             els.intro.classList.add('active');
@@ -162,13 +192,23 @@
         socket.on('playerEliminated', (name) => {
             if(name.toUpperCase() === myName.toUpperCase()) {
                 isEliminated = true;
-                // PUNTO 7: Activar modo espectador
-                els.elimBar.style.display = 'block';
-                // Asegurar que no vea overlays bloqueantes si estamos en juego
-                els.vote.style.display = 'none';
-                els.timesUp.style.display = 'none';
-                els.waitOver.style.display = 'flex';
-                els.waitMsg.innerText = "ELIMINADO - MODO ESPECTADOR";
+                
+                // PUNTO 1: Mostrar Mensaje 4 segundos y luego volver al juego (modo espectador)
+                els.elimMsg.innerText = `${myName}, has sido el rival más débil de la ronda ${currentRound}`;
+                els.elim.style.display = 'flex';
+                
+                setTimeout(() => {
+                    els.elim.style.display = 'none'; // Ocultar overlay rojo
+                    els.game.classList.add('active'); // Asegurar juego visible
+                    
+                    // Cambiar subtítulo permanentemente a ROJO
+                    els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, has sido el rival más débil de la ronda ${currentRound}`;
+                    els.headerSub.style.color = "var(--danger)";
+                    
+                    // Bloqueos de UI
+                    els.waitOver.style.display = 'flex';
+                    els.waitMsg.innerText = "MODO ESPECTADOR";
+                }, 4000);
             }
         });
 
@@ -180,22 +220,20 @@
         });
 
         socket.on('phaseChanged', (phase) => {
-            // Limpieza general de overlays
+            // Limpieza general
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
 
-            // PUNTO 7: Si está eliminado, solo ve el juego (escalera/banco)
-            // No entra a votación ni ve Time's Up
+            // Si está eliminado, controlamos que vea el juego pero con bloqueo
             if (isEliminated) {
-                if (phase === 'waiting') {
+                if(phase === 'waiting') {
                     els.waitOver.style.display = 'flex';
-                    els.waitMsg.innerText = "ELIMINADO - Esperando siguiente ronda";
+                    els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
                 }
                 return; 
             }
 
-            // Lógica normal para jugadores vivos
             if(phase === 'waiting') {
                 els.waitOver.style.display = 'flex';
                 els.waitMsg.innerText = "Atención al Host...";
@@ -210,12 +248,14 @@
         });
 
         socket.on('roundUpdate', r => {
+            currentRound = r;
             if(!isEliminated && (els.waitMsg.innerText.includes("Esperando") || els.waitMsg.innerText.includes("Atención"))) {
                 els.waitMsg.innerText = `Esperando comenzar RONDA ${r}`;
             }
         });
 
         socket.on('bankState', state => {
+            // Actualizar Banco Total
             els.bank.innerText = `$${state.bankedTotal}`;
             
             els.ladder.innerHTML = '';
@@ -239,7 +279,6 @@
                         socket.emit('vote', p);
                         els.vote.style.display = 'none';
                         els.waitOver.style.display = 'flex';
-                        // PUNTO 1: Mensaje de confirmación voto
                         els.waitMsg.innerHTML = `HAS VOTADO POR:<br><span style="color:var(--danger); font-size:2rem">${p}</span>`;
                     };
                     els.vGrid.appendChild(btn);
