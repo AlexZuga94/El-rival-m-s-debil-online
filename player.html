@@ -6,7 +6,7 @@
     <title>JUGADOR - RIVAL MÁS DÉBIL</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #000000; --primary: #00d2ff; --accent: #f1c40f; --danger: #ff0055; --glass: rgba(255,255,255,0.08); }
+        :root { --bg: #000000; --primary: #00d2ff; --accent: #f1c40f; --danger: #ff0055; --success: #00ff9d; --glass: rgba(255,255,255,0.08); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
@@ -14,7 +14,7 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 85px;
             display: grid; grid-template-columns: 1fr auto; align-items: center; 
             padding: 10px 20px; 
-            padding-top: max(10px, env(safe-area-inset-top)); /* iOS Notch Safe */
+            padding-top: max(10px, env(safe-area-inset-top)); 
             background: #0a0a0a; border-bottom: 1px solid #333; z-index: 1000;
         }
         .header-info { display: flex; flex-direction: column; text-align: left; }
@@ -28,16 +28,8 @@
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
 
-        /* PUNTO 2: iOS Fix - Más padding y márgenes explícitos */
-        #gameScreen { 
-            padding-top: 120px; /* Aumentado para seguridad */
-            justify-content: flex-start; 
-        }
-        .bank-info { 
-            width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; 
-            position: relative; z-index: 50; 
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
+        #gameScreen { padding-top: 120px; justify-content: flex-start; }
+        .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; position: relative; z-index: 50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
         .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
 
@@ -77,25 +69,29 @@
         .oval.wrong { background: var(--danger); box-shadow: 0 0 10px var(--danger); border-color: var(--danger); }
         .oval.current { border-color: var(--accent); animation: pulse 1s infinite; }
 
-        /* PUNTO 3: PANTALLA DE GANADOR EPICA */
-        #winnerScreen { 
-            background: radial-gradient(circle at center, #222 0%, #000 100%); 
-            z-index: 3000; 
-        }
+        /* PANTALLA GANADOR */
+        #winnerScreen { background: radial-gradient(circle at center, #222 0%, #000 100%); z-index: 3000; }
         .w-trophy { font-size: 6rem; animation: bounce 2s infinite; text-shadow: 0 0 50px gold; }
         .w-title { font-size: 1.5rem; color: #888; text-transform: uppercase; margin-top: 20px; }
         .w-name { font-size: 3.5rem; color: var(--primary); font-weight: 900; text-transform: uppercase; line-height: 1.1; margin: 10px 0; text-shadow: 0 0 20px var(--primary); animation: zoomGlow 2s infinite alternate; }
         .w-msg { font-size: 1.2rem; color: white; margin-bottom: 20px; }
         .w-amount { font-size: 4rem; color: var(--accent); font-weight: 900; text-shadow: 0 0 30px var(--accent); }
         
-        /* Efecto Confeti Simple */
-        .confetti { position: absolute; width: 10px; height: 10px; background: red; animation: fall linear infinite; opacity: 0; }
+        /* PANTALLA PERDEDOR FINAL */
+        #loserFinalScreen { background: rgba(0,0,0,0.98); z-index: 3000; }
+        .l-msg { font-size: 1.5rem; color: white; line-height: 1.5; max-width: 80%; }
         
+        /* PANTALLA INTRODUCCIÓN FINAL */
+        #introFinalScreen { background: rgba(0,0,0,0.95); z-index: 2500; }
+        .if-title { font-size: 1.5rem; color: var(--accent); margin-bottom: 30px; letter-spacing: 5px; }
+        .if-vs { font-size: 4rem; font-weight: 900; color: var(--danger); margin: 20px 0; font-style: italic; }
+        .if-player { font-size: 2.5rem; font-weight: bold; color: white; }
+
+        .confetti { position: absolute; width: 10px; height: 10px; background: red; animation: fall linear infinite; opacity: 0; }
         @keyframes fall { to { transform: translateY(100vh) rotate(720deg); opacity: 1; } }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
         @keyframes fadeIn { to { opacity:1; } }
         @keyframes zoomGlow { to { transform:scale(1.05); text-shadow:0 0 40px var(--primary); } }
-        @keyframes shake { 0%, 100% { transform:translateX(0); } 25% { transform:translateX(-5px); } 75% { transform:translateX(5px); } }
         @keyframes pulse { 0%{opacity:0.8} 50%{opacity:1} 100%{opacity:0.8} }
     </style>
 </head>
@@ -146,8 +142,7 @@
                 <div id="penP2Ovals" class="ovals-wrapper"></div>
             </div>
         </div>
-        <div style="margin-top:20px; color:#888;">PENALES / MUERTE SÚBITA</div>
-    </div>
+        </div>
 
     <div id="timesUpScreen" class="overlay">
         <div class="tu-icon">⏰</div>
@@ -165,6 +160,13 @@
         <div id="elimMsg" class="elim-text">Has sido eliminado.</div>
     </div>
 
+    <div id="introFinalScreen" class="overlay">
+        <div class="if-title">GRAN FINAL</div>
+        <div id="ifP1" class="if-player">JUGADOR 1</div>
+        <div class="if-vs">VS</div>
+        <div id="ifP2" class="if-player">JUGADOR 2</div>
+    </div>
+
     <div id="winnerScreen" class="overlay">
         <div class="w-trophy">🏆</div>
         <div class="w-title">¡FELICIDADES!</div>
@@ -172,7 +174,12 @@
         <div class="w-msg">TÚ HAS SIDO EL RIVAL MÁS FUERTE</div>
         <div style="font-size:0.9rem; color:#888; margin-top:10px;">HAS GANADO</div>
         <div id="wAmount" class="w-amount">$0</div>
-        </div>
+    </div>
+
+    <div id="loserFinalScreen" class="overlay">
+        <div class="elim-icon" style="font-size:4rem; color:#888;">💔</div>
+        <div id="lMsg" class="l-msg"></div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -193,6 +200,8 @@
             timesUp: document.getElementById('timesUpScreen'),
             elim: document.getElementById('eliminatedScreen'),
             winner: document.getElementById('winnerScreen'),
+            introFinal: document.getElementById('introFinalScreen'),
+            loserFinal: document.getElementById('loserFinalScreen'),
             
             ladder: document.getElementById('ladderContainer'),
             bank: document.getElementById('bankTotal'),
@@ -208,7 +217,11 @@
             p2Name: document.getElementById('penP2Name'),
             p2Ovals: document.getElementById('penP2Ovals'),
             wName: document.getElementById('wName'),
-            wAmount: document.getElementById('wAmount')
+            wAmount: document.getElementById('wAmount'),
+            
+            ifP1: document.getElementById('ifP1'),
+            ifP2: document.getElementById('ifP2'),
+            lMsg: document.getElementById('lMsg')
         };
 
         function enterGame() {
@@ -228,14 +241,17 @@
         }
 
         function renderPhase(phase) {
+            // Ocultar overlays temporales
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
+            els.introFinal.style.display = 'none';
+            
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
             els.game.classList.remove('active');
             els.penalty.classList.remove('active');
 
             if (isEliminated) {
-                 if(phase === 'penalty') els.penalty.classList.add('active');
+                 if(phase === 'penalty' || phase === 'final_intro') els.penalty.classList.add('active');
                  else els.game.classList.add('active');
                  if(phase === 'waiting') {
                     els.waitOver.style.display = 'flex';
@@ -244,8 +260,11 @@
                 return; 
             }
 
-            if (phase === 'penalty') {
+            if (phase === 'penalty' || phase === 'final_intro') {
                 els.penalty.classList.add('active');
+                if (phase === 'final_intro') {
+                     els.introFinal.style.display = 'flex';
+                }
                 return;
             }
 
@@ -280,11 +299,25 @@
         socket.on('gameReset', () => location.reload());
 
         socket.on('finalWinner', data => {
-            // Mostrar pantalla ganadora incluso si estaba eliminado (para que todos vean al ganador)
-            els.winner.style.display = 'flex';
-            els.wName.innerText = data.name;
-            els.wAmount.innerText = `$${data.amount}`;
-            createConfetti();
+            if (myName.toUpperCase() === data.name.toUpperCase()) {
+                // SOY EL GANADOR
+                els.winner.style.display = 'flex';
+                els.wName.innerText = data.name;
+                els.wAmount.innerText = `$${data.amount}`;
+                createConfetti();
+            } 
+            else if (els.penalty.classList.contains('active') && !isEliminated) {
+                // SOY EL PERDEDOR DE LA FINAL (Estaba en fase de penales y no soy el ganador)
+                els.loserFinal.style.display = 'flex';
+                els.lMsg.innerHTML = `${myName},<br>GRACIAS POR PARTICIPAR.<br>PERO HAS SIDO ELIMINADO DE<br><span style="color:var(--primary); font-weight:bold;">EL RIVAL MÁS DÉBIL</span>`;
+            } 
+            else {
+                // SOY ESPECTADOR (Ya estaba eliminado antes)
+                els.winner.style.display = 'flex';
+                els.wName.innerText = data.name;
+                els.wAmount.innerText = `$${data.amount}`;
+                createConfetti();
+            }
         });
 
         socket.on('playerEliminated', (name) => {
@@ -355,6 +388,10 @@
         });
 
         socket.on('finalState', final => {
+            // Llenar datos de introducción
+            els.ifP1.innerText = final.p1.name;
+            els.ifP2.innerText = final.p2.name;
+
             els.p1Name.innerText = final.p1.name;
             els.p2Name.innerText = final.p2.name;
             
