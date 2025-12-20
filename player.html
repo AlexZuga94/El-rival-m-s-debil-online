@@ -8,40 +8,64 @@
     <style>
         :root { --bg: #000000; --primary: #00d2ff; --accent: #f1c40f; --danger: #ff0055; --glass: rgba(255,255,255,0.08); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body { margin:0; background:var(--bg); color:white; font-family:'Outfit'; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
-        /* PUNTO 2: HEADER GRID PARA TIMER MÁS VISIBLE */
+        /* CORRECCIÓN PUNTO 2: Header FIJO para que no tape nada */
         header { 
-            display: grid; 
-            grid-template-columns: 1fr auto; 
-            align-items: center; 
-            padding: 15px 20px; 
-            border-bottom: 1px solid #333; 
-            background: #0a0a0a; 
-            z-index: 10; 
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 85px;
+            display: grid; grid-template-columns: 1fr auto; align-items: center; 
+            padding: 10px 20px; 
+            background: #0a0a0a; border-bottom: 1px solid #333; z-index: 100;
         }
         
         .header-info { display: flex; flex-direction: column; text-align: left; }
-        .app-title { font-weight:900; font-size:1.4rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1.1; }
-        .app-subtitle { font-size: 0.9rem; color: #888; margin-top: 5px; font-weight: 300; }
+        .app-title { font-weight:900; font-size:1.3rem; letter-spacing:1px; color:var(--primary); text-transform:uppercase; margin:0; line-height: 1.1; }
+        .app-subtitle { font-size: 0.8rem; color: #888; margin-top: 5px; font-weight: 300; }
         
-        /* TIMER GRANDE Y A LA DERECHA */
         .header-timer { 
-            font-size: 2.8rem; 
-            font-weight: 700; 
-            color: white; 
-            min-width: 80px; 
-            text-align: right; 
-            line-height: 1;
+            font-size: 2.8rem; font-weight: 700; color: white; 
+            min-width: 80px; text-align: right; line-height: 1;
         }
         .timer-warn { color: var(--accent); }
         .timer-crit { color: var(--danger); animation: pulse 0.5s infinite; }
 
         .highlight-name { color: var(--accent); font-weight: bold; }
 
+        /* PANTALLAS */
         .screen { position:absolute; top:0; left:0; width:100%; height:100%; display:none; flex-direction:column; align-items:center; justify-content:center; background:var(--bg); z-index:5; }
         .active { display:flex; }
 
+        /* JUEGO */
+        #gameScreen { 
+            /* CORRECCIÓN PUNTO 2: Padding Top para respetar el Header Fijo */
+            padding-top: 90px; 
+            justify-content: flex-start; 
+        }
+
+        /* CORRECCIÓN PUNTO 3: Banco siempre visible y acomodado */
+        .bank-info { 
+            width:100%; background:#111; padding:15px; text-align:center; 
+            border-bottom:1px solid #333; 
+            /* Asegurar que se vea por encima de otros elementos si hay scroll */
+            position: relative; z-index: 10;
+        }
+        .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
+        .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
+
+        /* ESCALERA */
+        #ladderContainer { 
+            flex:1; display:flex; flex-direction: column-reverse; 
+            justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; overflow-y: auto;
+        }
+        .step { 
+            width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+        .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
+
+        /* LOGIN & INTRO */
         .login-box { width:80%; text-align:center; }
         input { width:100%; padding:15px; background:#222; border:none; color:white; font-size:1.2rem; text-align:center; border-radius:10px; margin-bottom:15px; }
         .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; }
@@ -51,25 +75,8 @@
         .intro-text-2 { font-size:1.5rem; margin-top:10px; color:#888; animation: fadeIn 1s forwards 1s; opacity:0; }
         .intro-logo { font-size:3rem; font-weight:900; margin-top:20px; color:var(--primary); text-transform:uppercase; text-shadow:0 0 20px var(--primary); animation: zoomGlow 1.5s forwards 2s; opacity:0; transform:scale(0.5); }
 
-        #gameScreen { padding-top:0px; justify-content: flex-start; }
-        
-        /* PUNTO 3: Banco Arriba y muy visible */
-        .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; margin-top: 10px; }
-        .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
-        .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
-
-        #ladderContainer { 
-            flex:1; display:flex; flex-direction: column-reverse; 
-            justify-content:center; align-items:center; width:100%; padding:20px; gap:5px; 
-        }
-        
-        .step { 
-            width:90%; padding:8px; text-align:center; background:#1a1a1a; border-radius:8px; font-weight:bold; color:#555; transition:0.3s; font-size:1.2rem; 
-            display: flex; justify-content: center; align-items: center; 
-        }
-        .step.active { background:var(--accent); color:black; transform:scale(1.1); box-shadow:0 0 20px rgba(241,196,15,0.4); z-index:2; }
-
-        .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:50; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
+        /* OVERLAYS */
+        .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
         #votingGrid { display:grid; grid-template-columns:1fr 1fr; gap:15px; width:90%; margin-top:20px; }
         .vote-btn { padding:20px; background:#222; border:1px solid #444; color:white; font-weight:bold; font-size:1rem; border-radius:10px; }
@@ -147,6 +154,8 @@
         let myName = "";
         let isEliminated = false;
         let currentRound = 1;
+        // CORRECCIÓN PUNTO 3: Variable para guardar la ronda exacta de eliminación
+        let myEliminationRound = null;
         
         const els = {
             login: document.getElementById('loginScreen'),
@@ -172,7 +181,7 @@
             if(!name) return;
             myName = name;
             socket.emit('registerPlayer', name);
-            // PUNTO 5: Coma y Color
+            
             els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, estás jugando a El Rival más Débil`;
 
             els.login.classList.remove('active');
@@ -192,20 +201,21 @@
         socket.on('playerEliminated', (name) => {
             if(name.toUpperCase() === myName.toUpperCase()) {
                 isEliminated = true;
+                // Guardamos la ronda actual para siempre
+                myEliminationRound = currentRound;
                 
-                // PUNTO 1: Mostrar Mensaje 4 segundos y luego volver al juego (modo espectador)
-                els.elimMsg.innerText = `${myName}, has sido el rival más débil de la ronda ${currentRound}`;
+                // Mostrar pantalla roja temporal
+                els.elimMsg.innerText = `${myName}, has sido el rival más débil de la ronda ${myEliminationRound}`;
                 els.elim.style.display = 'flex';
                 
                 setTimeout(() => {
-                    els.elim.style.display = 'none'; // Ocultar overlay rojo
-                    els.game.classList.add('active'); // Asegurar juego visible
+                    els.elim.style.display = 'none'; 
+                    els.game.classList.add('active'); 
                     
-                    // Cambiar subtítulo permanentemente a ROJO
-                    els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, has sido el rival más débil de la ronda ${currentRound}`;
+                    // Actualizar subtítulo y dejarlo FIJO con la ronda de eliminación
+                    els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, has sido el rival más débil de la ronda ${myEliminationRound}`;
                     els.headerSub.style.color = "var(--danger)";
                     
-                    // Bloqueos de UI
                     els.waitOver.style.display = 'flex';
                     els.waitMsg.innerText = "MODO ESPECTADOR";
                 }, 4000);
@@ -220,13 +230,12 @@
         });
 
         socket.on('phaseChanged', (phase) => {
-            // Limpieza general
             els.vote.style.display = 'none';
             els.timesUp.style.display = 'none';
             if(phase !== 'waiting') els.waitOver.style.display = 'none';
 
-            // Si está eliminado, controlamos que vea el juego pero con bloqueo
             if (isEliminated) {
+                // CORRECCIÓN PUNTO 3: Mensaje persistente usando la ronda de eliminación guardada
                 if(phase === 'waiting') {
                     els.waitOver.style.display = 'flex';
                     els.waitMsg.innerText = "ESPERANDO SIGUIENTE RONDA...";
@@ -249,13 +258,13 @@
 
         socket.on('roundUpdate', r => {
             currentRound = r;
+            // Si no estoy eliminado, actualizo mensajes normales
             if(!isEliminated && (els.waitMsg.innerText.includes("Esperando") || els.waitMsg.innerText.includes("Atención"))) {
                 els.waitMsg.innerText = `Esperando comenzar RONDA ${r}`;
             }
         });
 
         socket.on('bankState', state => {
-            // Actualizar Banco Total
             els.bank.innerText = `$${state.bankedTotal}`;
             
             els.ladder.innerHTML = '';
