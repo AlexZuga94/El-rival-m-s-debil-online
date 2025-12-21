@@ -201,14 +201,19 @@ io.on("connection", (socket) => {
         const cleanName = name.trim().toUpperCase();
         if (!gameState.players.includes(cleanName)) {
             gameState.players.push(cleanName);
-            gameState.turnOrder.push(cleanName);
+            
+            // --- NUEVO: ORDENAR ALFABÉTICAMENTE ---
+            gameState.players.sort(); 
+            gameState.turnOrder = [...gameState.players]; // Sincronizar el orden de turnos
+            
             playerSockets[socket.id] = cleanName;
-            // Inicializar estadísticas del nuevo jugador
             gameState.stats[cleanName] = { correct: 0, wrong: 0, bankAmount: 0, bankCount: 0 };
             
-            // AVISAR A TODOS
+            // Avisar a todos y actualizar ranking en el Host
             io.emit("playersUpdated", gameState.players);
-            updateRanking(); // <--- ¡ESTA ES LA LÍNEA MÁGICA QUE FALTABA!
+            updateRanking();
+            // Actualizar turno para que el Host vea quién empieza (el primero de la lista A-Z)
+            io.emit("turnUpdate", getCurrentPlayer());
         }
     });
 
@@ -349,4 +354,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
