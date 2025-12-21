@@ -54,7 +54,6 @@
         .a-text { font-size:1.5rem; color:var(--success); background:rgba(0,255,157,0.1); padding:5px 20px; border-radius:20px; }
         .cat-text { font-size: 1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold; }
 
-        /* Estilos del Banner de Ganador */
         .winner-banner { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; animation: fadeIn 1s ease; }
         .wb-title { color: var(--accent); font-size: 1.2rem; letter-spacing: 3px; font-weight: 900; margin-bottom: 15px; text-transform: uppercase; }
         .wb-name { font-size: 4rem; font-weight: 900; color: white; text-shadow: 0 0 30px var(--primary); margin-bottom: 20px; line-height: 1; }
@@ -120,6 +119,7 @@
     <div class="main-grid">
         <div class="panel">
             <small style="color:#888">CONTROL PRINCIPAL</small>
+            
             <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
             <button id="btnJuguemos" class="btn btn-phrase" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
             
@@ -211,7 +211,7 @@
         let activePhase = 'waiting'; 
         let currentRound = 1;
 
-        // --- MOTOR DE AUDIO ---
+        // --- MOTOR DE AUDIO AVANZADO ---
         let currentMusic = null;
         let currentFileName = "";
         const debugEl = document.getElementById('audioDebug');
@@ -221,15 +221,20 @@
             debugEl.style.color = color;
         }
 
-        function playAudioFile(fileName, loop = false) {
+        // Función para reproducir música (Background)
+        // Soporta encadenamiento (chainTo): qué tocar cuando termine
+        function playAudioFile(fileName, loop = false, chainTo = null) {
+            // Evitar reinicio si ya suena lo mismo
             if (currentMusic && currentFileName === fileName && !currentMusic.paused) {
-                console.log("Audio ya sonando, ignorando reinicio:", fileName);
                 return;
             }
 
+            // Si hay otra música sonando, la paramos
             if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
+                // Importante: Limpiar el onended anterior para no disparar cadenas viejas
+                currentMusic.onended = null; 
             }
             
             const path = '/SOUNDS/' + fileName;
@@ -238,6 +243,14 @@
             const sound = new Audio(path);
             sound.loop = loop;
             sound.volume = 0.5; 
+            
+            // Lógica de encadenamiento (Cuando termine A, suena B)
+            if (chainTo) {
+                sound.onended = () => {
+                    console.log("Audio terminado, encadenando a: " + chainTo);
+                    playAudioFile(chainTo, true); // El siguiente suele ser loop (platica o final)
+                };
+            }
             
             sound.play()
                 .then(() => {
@@ -249,11 +262,6 @@
                     currentFileName = "";
                 });
                 
-            sound.onerror = () => {
-                updateDebug("ERROR: Archivo no encontrado " + fileName, "#f00");
-                currentFileName = "";
-            };
-            
             currentMusic = sound;
         }
 
@@ -261,6 +269,7 @@
             if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
+                currentMusic.onended = null; // Romper cadenas pendientes
                 currentMusic = null;
                 currentFileName = ""; 
                 updateDebug("Silencio", "#888");
@@ -279,16 +288,21 @@
             const secs = seconds % 60;
             const id = `${mins}${secs.toString().padStart(2, '0')}`;
             const fileName = `timer_${id}.mp3`;
-            playAudioFile(fileName, false);
+            
+            // AQUÍ ESTÁ LA MAGIA: 
+            // Reproduce timer_xxx y cuando acabe, salta automáticamente a platica.mp3
+            playAudioFile(fileName, false, 'platica.mp3');
         }
         
+        // Efectos de Sonido (SFX) - Se mezclan, NO paran la música
         const sfx = {
             correct: new Audio('/SOUNDS/correct.mp3'),
             wrong: new Audio('/SOUNDS/wrong.mp3'),
             bank: new Audio('/SOUNDS/bank.mp3'),
-            eliminated: new Audio('/SOUNDS/eliminated.mp3'),
-            winner: new Audio('/SOUNDS/winner.mp3'),
-            juguemos: new Audio('/SOUNDS/juguemos.mp3')
+            eliminado: new Audio('/SOUNDS/eliminado.mp3'), // Nombre corregido
+            ganador: new Audio('/SOUNDS/ganador.mp3'), // Nombre corregido
+            juguemos: new Audio('/SOUNDS/juguemos.mp3'),
+            votando: new Audio('/SOUNDS/votando.mp3') // Nuevo
         };
 
         function playSfx(name) {
@@ -296,6 +310,13 @@
                 sfx[name].currentTime = 0;
                 sfx[name].play().catch(e => updateDebug("SFX bloqueado, clickea pantalla", "#f00"));
             }
+        }
+
+        // --- SECUENCIA DE FINAL ---
+        function playFinalSequence() {
+            stopMusic(); // Silencio total
+            // Reproduce anuncio y luego loop de jugando_final
+            playAudioFile('anuncio_final.mp3', false, 'jugando_final.mp3');
         }
 
         const els = {
@@ -355,12 +376,28 @@
         socket.on('phaseChanged', phase => {
             activePhase = phase;
 
-            if (phase === 'waiting' || phase === 'voting') {
-                stopMusic(); 
-            }
+            // Lógica de Audio por Fases
             
             if (phase === 'questions') {
-                playRoundMusic(); 
+                playRoundMusic(); // Timer -> Platica
+            }
+            
+            else if (phase === 'voting') {
+                // NO paramos música (sigue platica.mp3 de fondo)
+                playSfx('votando'); // Suena encima
+            }
+            
+            else if (phase === 'final_intro' || phase === 'penalty') {
+                // Detectamos inicio de la final
+                if (currentFileName !== 'jugando_final.mp3' && currentFileName !== 'anuncio_final.mp3') {
+                    playFinalSequence();
+                }
+            }
+            
+            // Solo paramos música si volvemos a 'waiting' (lobby)
+            else if (phase === 'waiting') {
+                // Opcional: Podrías poner música de lobby aquí
+                stopMusic(); 
             }
 
             // RESETEAR VISTA PREGUNTA
@@ -434,14 +471,12 @@
 
         socket.on('finalWinner', data => {
             stopMusic();
-            playSfx('winner');
+            playSfx('ganador'); // Fanfarria final
             
-            // Ocultar textos de preguntas
             els.qCat.style.display = 'none';
             els.qText.style.display = 'none';
             els.aText.style.display = 'none';
 
-            // Mostrar banner
             els.winnerBanner.style.display = 'flex';
             els.winnerName.innerText = data.name; 
             els.winnerAmount.innerText = `$${data.amount}`;
@@ -544,7 +579,8 @@
             }
         });
         
-        socket.on('playerEliminated', () => playSfx('eliminated'));
+        // SONIDO ELIMINADO: Se mezcla con la música de fondo
+        socket.on('playerEliminated', () => playSfx('eliminado'));
 
         socket.on('finalState', final => {
             els.p1Name.innerText = final.p1.name;
