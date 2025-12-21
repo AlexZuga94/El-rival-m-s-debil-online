@@ -337,15 +337,52 @@ io.on("connection", (socket) => {
     });
 
     socket.on("eliminatePlayer", (name) => {
+        // 1. Quitar al eliminado de la lista de jugadores activos
         gameState.players = gameState.players.filter(p => p !== name);
-        gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
-        if (gameState.turnIndex >= gameState.turnOrder.length) gameState.turnIndex = 0;
         
+        // 2. CALCULAR EL MÁS FUERTE DE LOS SOBREVIVIENTES (Para que empiece la ronda)
+        const strongestSurvivor = getStrongestPlayerName();
+
+        // 3. REORDENAR TURNOS
+        // Primero ordenamos alfabéticamente para tener una base consistente
+        gameState.players.sort(); 
+        
+        if (strongestSurvivor && gameState.players.includes(strongestSurvivor)) {
+            // Buscamos dónde está el más fuerte
+            const startIdx = gameState.players.indexOf(strongestSurvivor);
+            
+            // Hacemos la rotación: Ponemos al fuerte y los que le siguen primero...
+            const part1 = gameState.players.slice(startIdx);
+            // ...y los que estaban antes en el alfabeto, los ponemos al final
+            const part2 = gameState.players.slice(0, startIdx);
+            
+            gameState.turnOrder = part1.concat(part2);
+        } else {
+            // Si es la ronda 1 o no hay datos, se queda alfabético
+            gameState.turnOrder = [...gameState.players];
+        }
+
+        // Reiniciar el índice para que empiece el primero de la nueva lista (el más fuerte)
+        gameState.turnIndex = 0;
+
+        // 4. REINICIAR ESTADÍSTICAS DE RONDA
+        // Esto es VITAL: Limpiamos aciertos/errores para que la próxima ronda 
+        // tenga su propio "Rival Más Débil" fresco.
+        gameState.players.forEach(p => {
+             if(gameState.stats[p]) {
+                 gameState.stats[p].correct = 0;
+                 gameState.stats[p].wrong = 0;
+                 // NOTA: No borramos el dinero (bankAmount) porque ese es acumulativo
+             }
+        });
+
+        // Limpiar votos y notificar
         gameState.votes = {};
         gameState.detailedVotes = [];
         io.emit("playerEliminated", name);
         io.emit("playersUpdated", gameState.players);
         
+        // Avanzar ronda y fase
         gameState.round++;
         gameState.phase = "waiting"; 
         broadcastState();
@@ -354,5 +391,6 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
 
