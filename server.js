@@ -24,7 +24,7 @@ let gameState = {
     turnIndex: 0,
     round: 1,
     phase: "waiting", 
-    timer: INITIAL_ROUND_TIME,
+    timer: 180,
     bank: { total: 0, roundTotal: 0, chainIndex: -1, currentValue: 0 },
     
     // Manejo de preguntas
@@ -367,3 +367,4 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
