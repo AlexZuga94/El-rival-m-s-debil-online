@@ -28,6 +28,7 @@
         .btn-next-step { border: 2px solid var(--primary); background: rgba(0, 210, 255, 0.2); box-shadow: 0 0 10px var(--primary); }
         .btn.active { background:var(--primary); color:black; }
         .btn-danger { color:var(--danger); border:1px solid var(--danger); }
+        .btn-intro { background: #e91e63; color: white; margin-bottom: 10px; text-align: center; border: 1px solid #ff6090; }
         .btn-reset { margin-top: auto; background: #300; border: 1px solid #500; color: #f88; text-align: center; flex-shrink: 0; }
 
         .center-panel { display: flex; flex-direction: column; padding: 10px; position: relative; } 
@@ -108,7 +109,10 @@
 
     <div class="main-grid">
         <div class="panel">
-            <small style="color:#888">FASES</small>
+            <small style="color:#888">CONTROL PRINCIPAL</small>
+            <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
+            
+            <small style="color:#888; margin-top:5px;">FASES</small>
             <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
             <button id="btnPhaseQ" class="btn" onclick="setPhase('questions')">▶ PREGUNTAS</button>
             <button id="btnPhaseVote" class="btn" onclick="setPhase('voting')">🗳 VOTACIÓN</button>
@@ -197,7 +201,7 @@
 
         // --- MOTOR DE AUDIO ---
         let currentMusic = null;
-        let currentFileName = ""; // Variable clave para no reiniciar
+        let currentFileName = "";
         const debugEl = document.getElementById('audioDebug');
 
         function updateDebug(msg, color='#fff') {
@@ -206,7 +210,6 @@
         }
 
         function playAudioFile(fileName, loop = false) {
-            // CORRECCIÓN: Si es el mismo archivo que ya suena, NO HACER NADA
             if (currentMusic && currentFileName === fileName && !currentMusic.paused) {
                 console.log("Audio ya sonando, ignorando reinicio:", fileName);
                 return;
@@ -217,7 +220,6 @@
                 currentMusic.currentTime = 0;
             }
             
-            // Asegúrate que en GitHub la carpeta sea 'SOUNDS' (mayúsculas)
             const path = '/SOUNDS/' + fileName;
             updateDebug("Intentando: " + fileName, "#0ff");
             
@@ -228,7 +230,7 @@
             sound.play()
                 .then(() => {
                     updateDebug("Reproduciendo: " + fileName, "#0f0");
-                    currentFileName = fileName; // Guardamos el nombre actual
+                    currentFileName = fileName; 
                 })
                 .catch(e => {
                     updateDebug("ERROR: " + e.message, "#f00");
@@ -248,26 +250,22 @@
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
                 currentMusic = null;
-                currentFileName = ""; // Reseteamos el nombre para que la próxima vez sí suene
+                currentFileName = ""; 
                 updateDebug("Silencio", "#888");
             }
         }
 
-        // --- LÓGICA DE CÁLCULO DE AUDIO POR RONDA ---
         function playRoundMusic() {
             let seconds = 0;
-            
             if (activePlayersCount === 2) {
                 seconds = 90; 
             } else {
                 seconds = 180 - ((currentRound - 1) * 10);
             }
             
-            // Convertir segundos (180) a formato nombre archivo ("300")
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             const id = `${mins}${secs.toString().padStart(2, '0')}`;
-            
             const fileName = `timer_${id}.mp3`;
             playAudioFile(fileName, false);
         }
@@ -346,10 +344,14 @@
             if (phase === 'waiting' || phase === 'voting') {
                 stopMusic(); 
             }
-            if (phase === 'times_up') playSfx('wrong');
+            // NOTA: Eliminamos 'times_up' de stopMusic para que el audio siga sonando hasta el final
+            
+            if (phase === 'times_up') {
+                // playSfx('wrong'); // Descomenta si quieres buzzer extra
+            }
 
             if (phase === 'questions') {
-                playRoundMusic(); // El filtro dentro de playAudioFile evitará que se reinicie
+                playRoundMusic(); 
             }
 
             els.winnerBanner.style.display = 'none'; 
@@ -453,7 +455,19 @@
             }
         });
         
-        socket.on('turnUpdate', p => els.turn.innerText = `TURNO DE: ${p || "--"}`);
+        // MODIFICACIÓN: Mostrar "Comienza..." en fase de espera
+        socket.on('turnUpdate', p => {
+            if (activePhase === 'waiting') {
+                els.turn.innerText = `COMIENZA: ${p || "Esperando jugadores..."}`;
+                els.turn.style.background = "rgba(255, 64, 129, 0.2)"; // Un tono diferente para destacar
+                els.turn.style.border = "1px solid #ff4081";
+            } else {
+                els.turn.innerText = `TURNO DE: ${p || "--"}`;
+                els.turn.style.background = "rgba(0, 210, 255, 0.1)"; // Volver al azul normal
+                els.turn.style.border = "1px solid var(--primary)";
+            }
+        });
+
         socket.on('roundUpdate', r => {
             currentRound = r;
             els.round.innerText = r;
@@ -549,4 +563,3 @@
     </script>
 </body>
 </html>
-
