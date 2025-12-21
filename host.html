@@ -85,9 +85,7 @@
         .row-weakest { color: var(--danger); }
         .row-weakest .col-name::after { content: ' ▼'; }
 
-        /* DEBUG AUDIO */
         #audioDebug { font-size: 0.7rem; color: #555; position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 5px; pointer-events: none; }
-        
         @keyframes pulse { 0%{opacity:0.6} 50%{opacity:1} 100%{opacity:0.6} }
     </style>
 </head>
@@ -211,7 +209,7 @@
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
             }
-            // IMPORTANTE: Ruta con mayúsculas SOUNDS
+            // Asegúrate que en GitHub la carpeta sea 'SOUNDS' (mayúsculas)
             const path = '/SOUNDS/' + fileName;
             updateDebug("Intentando: " + fileName, "#0ff");
             
@@ -241,16 +239,13 @@
         function playRoundMusic() {
             let seconds = 0;
             
-            // Si solo quedan 2 jugadores, siempre es 1:30 (90s)
             if (activePlayersCount === 2) {
                 seconds = 90; 
             } else {
-                // Cálculo matemático: 180 - (Ronda-1)*10
-                // Ronda 1: 180, Ronda 2: 170...
                 seconds = 180 - ((currentRound - 1) * 10);
             }
             
-            // Formatear a nombre de archivo (ej. 180 -> "300")
+            // Convertir segundos (180) a formato nombre archivo ("300")
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             const id = `${mins}${secs.toString().padStart(2, '0')}`;
@@ -274,7 +269,6 @@
             }
         }
 
-        // --- LÓGICA VISUAL Y SOCKETS ---
         const els = {
             timer: document.getElementById('timerDisplay'),
             bankTotal: document.getElementById('bankTotalDisplay'),
@@ -337,12 +331,9 @@
             if (phase === 'times_up') playSfx('wrong');
 
             if (phase === 'questions') {
-                // DISPARAR MÚSICA AL INICIAR LA FASE
-                // Aquí usamos la lógica matemática, no dependemos de si el reloj llegó o no
                 playRoundMusic();
             }
 
-            // Actualización Visual
             els.winnerBanner.style.display = 'none'; 
             els.preFinal.style.display = 'none'; 
 
