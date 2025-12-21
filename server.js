@@ -12,9 +12,10 @@ const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.static(__dirname));
 
 // --- CONFIGURACIÓN DE TIEMPOS Y CADENA ---
-const INITIAL_ROUND_TIME = 180; // 3 minutos (180 segundos)
+// Ajuste solicitado: 3 minutos (180s) iniciales, -10s por ronda, 1:30 (90s) final
+const INITIAL_ROUND_TIME = 180; 
 const TIME_REDUCTION_PER_ROUND = 10; 
-const FINAL_DUEL_TIME = 90;    // 1:30 minutos (90 segundos) para los últimos 2
+const FINAL_DUEL_TIME = 90;    
 const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; 
 
 let gameState = {
@@ -104,6 +105,50 @@ const updateRanking = () => {
     io.emit("rankingUpdate", ranking);
 };
 
+// --- FUNCIÓN DE CONTEO DE VOTOS (CORREGIDA Y ROBUSTA) ---
+const checkVotingResults = () => {
+    // Solo contamos a los jugadores que siguen en el juego (vivos)
+    const activePlayersNames = gameState.players; 
+    const votesCast = gameState.detailedVotes.length;
+
+    // Si ya votaron todos los que están presentes
+    if (activePlayersNames.length > 0 && votesCast >= activePlayersNames.length) {
+        let counts = {};
+        
+        // Contabilizar votos
+        gameState.detailedVotes.forEach(v => { 
+            counts[v.target] = (counts[v.target] || 0) + 1; 
+        });
+
+        let maxVotes = 0;
+        let candidates = [];
+
+        // Determinar quién tiene más votos
+        for (const [player, count] of Object.entries(counts)) {
+            if (count > maxVotes) {
+                maxVotes = count;
+                candidates = [player];
+            } else if (count === maxVotes) {
+                candidates.push(player);
+            }
+        }
+
+        // Enviar al Host
+        if (candidates.length === 1) {
+            // Ganador claro
+            io.emit("votingResult", { type: "clear", target: candidates[0], count: maxVotes });
+        } else {
+            // Empate: El "Rival más Fuerte" decide
+            io.emit("votingResult", { 
+                type: "tie", 
+                targets: candidates, 
+                count: maxVotes, 
+                decisionMaker: getStrongestPlayerName() 
+            });
+        }
+    }
+};
+
 function checkPenaltyWinner() {
     const p1 = gameState.final.p1;
     const p2 = gameState.final.p2;
@@ -112,6 +157,7 @@ function checkPenaltyWinner() {
     const shots1 = p1.history.length;
     const shots2 = p2.history.length;
     
+    // FASE REGULAR
     if (shots1 <= 5 && shots2 <= 5) {
         const remaining1 = 5 - shots1;
         const remaining2 = 5 - shots2;
@@ -122,6 +168,7 @@ function checkPenaltyWinner() {
             gameState.final.suddenDeath = true;
         }
     } 
+    // MUERTE SÚBITA
     else {
         gameState.final.suddenDeath = true;
         if (shots1 === shots2) {
@@ -135,20 +182,18 @@ function checkPenaltyWinner() {
     }
 }
 
-// --- LÓGICA DEL TIMER CORREGIDA ---
+// --- LÓGICA DEL TIMER DINÁMICO (CORREGIDA) ---
 function startTimer() {
     clearInterval(timerInterval);
 
-    // Si quedan exactamente 2 jugadores, el tiempo es 1:30
+    // Ajuste: Si quedan 2 jugadores, 1:30 min. Si no, cálculo normal.
     if (gameState.players.length === 2) {
         gameState.timer = FINAL_DUEL_TIME;
     } else {
-        // Tiempo inicial (180s) menos 10s por cada ronda transcurrida
         gameState.timer = INITIAL_ROUND_TIME - ((gameState.round - 1) * TIME_REDUCTION_PER_ROUND);
     }
 
-    // Mínimo de seguridad para que el tiempo no desaparezca en rondas muy avanzadas
-    if (gameState.timer < 30) gameState.timer = 30;
+    if (gameState.timer < 30) gameState.timer = 30; // Mínimo de seguridad
 
     io.emit("timerUpdate", gameState.timer);
 
@@ -285,9 +330,35 @@ io.on("connection", (socket) => {
         }
     });
 
+    // --- EVENTO DE VOTO CORREGIDO Y ROBUSTO ---
+    socket.on("vote", (target) => {
+        const voterName = playerSockets[socket.id];
+        // Validar que el que vota existe y no ha votado antes
+        if (voterName && gameState.players.includes(voterName)) {
+            const alreadyVoted = gameState.detailedVotes.find(v => v.voter === voterName);
+            if (!alreadyVoted) {
+                gameState.votes[target] = (gameState.votes[target] || 0) + 1;
+                gameState.detailedVotes.push({ voter: voterName, target: target });
+                
+                // Notificar a todos inmediatamente
+                io.emit("votesUpdated", { summary: gameState.votes, details: gameState.detailedVotes });
+                
+                // Verificar si ya terminaron
+                checkVotingResults();
+            }
+        }
+    });
+
     socket.on("eliminatePlayer", (name) => {
         gameState.players = gameState.players.filter(p => p !== name);
         gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
+        if (gameState.turnIndex >= gameState.turnOrder.length) gameState.turnIndex = 0;
+        
+        gameState.votes = {};
+        gameState.detailedVotes = [];
+        io.emit("playerEliminated", name);
+        io.emit("playersUpdated", gameState.players);
+        
         gameState.round++;
         gameState.phase = "waiting"; 
         broadcastState();
@@ -296,6 +367,3 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
-
-
-
