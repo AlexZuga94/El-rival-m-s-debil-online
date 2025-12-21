@@ -307,6 +307,7 @@
         });
         
         socket.on('phaseChanged', phase => {
+            roundMusicStarted = false;
             els.winnerBanner.style.display = 'none'; 
             els.preFinal.style.display = 'none'; 
 
@@ -319,6 +320,7 @@
             else els.hostPens.style.display = 'none';
 
             if(phase === 'voting' || phase === 'times_up') {
+                stopMusic();
                 els.qArea.style.display = 'none';
                 if (activePlayersCount === 2) {
                     els.vArea.style.display = 'none'; 
@@ -335,6 +337,7 @@
             }
 
             if (phase === 'waiting') {
+                stopMusic();
                 els.btnWait.classList.add('active');
                 els.btnQ.classList.add('btn-next-step');
                 els.gameBtns.forEach(b => b.disabled = true);
@@ -349,18 +352,21 @@
                 els.gameBtns.forEach(b => b.disabled = false);
             } 
             else if (phase === 'voting' || phase === 'times_up') {
+                stopMusic();
                 els.btnVote.classList.add('active');
                 els.btnElim.classList.add('btn-next-step');
                 els.btnQ.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = true);
             } 
             else if (phase === 'elimination') {
+                stopMusic();
                 els.btnElim.classList.add('active');
                 els.btnQ.classList.add('btn-next-step');
                 els.btnVote.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = true);
             }
             else if (phase === 'penalty') {
+                stopMusic();
                 els.btnPen.classList.add('active');
                 els.btnWait.disabled = true;
                 els.btnQ.disabled = true;
@@ -371,6 +377,20 @@
             }
         });
 
+        socket.on('timerUpdate', t => {
+        // Actualizar reloj visual
+        const minutes = Math.floor(t / 60);
+        const seconds = t % 60;
+        els.timer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        // --- AQUÍ ESTÁ EL TRUCO DEL AUDIO ---
+        // Si estamos en fase de preguntas, y la música AÚN no ha empezado...
+        if (activePhase === 'questions' && !roundMusicStarted && t > 0) {
+            playTimerMusic(t); // ¡Boom! Lanza timer_300, timer_250, etc.
+            roundMusicStarted = true; // Marcamos para que no se reinicie al siguiente segundo
+        }
+    });
+        
         socket.on('finalWinner', data => {
             els.winnerBanner.style.display = 'block';
             els.winnerName.innerText = data.name; 
@@ -491,5 +511,6 @@
     </script>
 </body>
 </html>
+
 
 
