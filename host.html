@@ -189,6 +189,33 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+
+        // --- MOTOR DE AUDIO ---
+const audioLibrary = {}; 
+
+// Función para registrar un sonido
+function loadSound(id, fileName) {
+    audioLibrary[id] = new Audio('/SOUNDS/' + fileName);
+}
+
+// Función para reproducir
+function playAudio(id, loop = false) {
+    const sound = audioLibrary[id];
+    if (sound) {
+        sound.loop = loop;
+        sound.currentTime = 0; // Reinicia el audio si ya estaba sonando
+        sound.play().catch(e => console.log("Audio bloqueado: Haz clic en la pantalla primero"));
+    }
+}
+
+// Función para detener (útil para la música de fondo)
+function stopAudio(id) {
+    const sound = audioLibrary[id];
+    if (sound) {
+        sound.pause();
+        sound.currentTime = 0;
+    }
+}
         let activePlayersCount = 0; 
 
         const els = {
@@ -428,3 +455,4 @@
     </script>
 </body>
 </html>
+
