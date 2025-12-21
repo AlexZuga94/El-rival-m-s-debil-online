@@ -1,47 +1,184 @@
 // questions.js
 module.exports = [
-    // GEOGRAFÍA
-    { category: "Geografía", question: "País con mayor extensión del Río Amazonas", answer: "Brasil" },
-    { category: "Geografía", question: "¿Capital de Italia?", answer: "Roma" },
-    { category: "Geografía", question: "¿Dónde está la Torre Eiffel?", answer: "Francia" },
-    { category: "Geografía", question: "¿Cuál es el océano más grande?", answer: "Pacífico" },
-    { category: "Geografía", question: "¿País más grande del mundo?", answer: "Rusia" },
-    
-    // CIENCIA
-    { category: "Ciencia", question: "¿Planeta más cercano al Sol?", answer: "Mercurio" },
-    { category: "Ciencia", question: "¿Símbolo químico del Hidrógeno?", answer: "H" },
-    { category: "Ciencia", question: "¿Metal precioso amarillo?", answer: "Oro" },
-    { category: "Ciencia", question: "¿Cuántas patas tiene una araña?", answer: "Ocho" },
-    { category: "Ciencia", question: "¿Órgano que bombea sangre?", answer: "Corazón" },
-    
-    // HISTORIA
-    { category: "Historia", question: "¿En qué año llegó Colón a América?", answer: "1492" },
-    { category: "Historia", question: "¿Primer presidente de Estados Unidos?", answer: "Washington" },
-    { category: "Historia", question: "¿Civilización que construyó Machu Picchu?", answer: "Inca" },
-    { category: "Historia", question: "¿Conflicto bélico de 1939 a 1945?", answer: "Segunda Guerra Mundial" },
+  // === BLOQUE 1 ===
+  { category: "Historia", question: "¿En qué año cayó el Muro de Berlín?", answer: "1989" },
+  { category: "Geografía", question: "¿Cuál es el país más grande del mundo por superficie?", answer: "Rusia" },
+  { category: "Ciencia", question: "¿Cuál es el elemento químico con símbolo Fe?", answer: "Hierro" },
+  { category: "Literatura", question: "¿Quién escribió Cien años de soledad?", answer: "Gabriel García Márquez" },
+  { category: "Arte", question: "¿Qué pintor es autor de La noche estrellada?", answer: "Vincent van Gogh" },
+  { category: "Historia", question: "¿Quién fue el primer emperador romano?", answer: "Augusto" },
+  { category: "Geografía", question: "¿Qué río atraviesa la ciudad de París?", answer: "Sena" },
+  { category: "Ciencia", question: "¿Cuántos huesos tiene el cuerpo humano adulto?", answer: "206" },
+  { category: "Cine", question: "¿Quién dirigió la película Titanic?", answer: "James Cameron" },
+  { category: "Música", question: "¿Qué compositor escribió la Novena Sinfonía?", answer: "Ludwig van Beethoven" },
 
-    // CULTURA GENERAL
-    { category: "General", question: "¿Cuántos lados tiene un hexágono?", answer: "Seis" },
-    { category: "General", question: "¿Color de la esperanza?", answer: "Verde" },
-    { category: "General", question: "¿Cuántos años tiene un siglo?", answer: "100" },
-    { category: "General", question: "¿Moneda de Japón?", answer: "Yen" },
-    
-    // ARTE Y LITERATURA
-    { category: "Arte", question: "¿Autor del Quijote?", answer: "Cervantes" },
-    { category: "Arte", question: "¿Pintor de la Mona Lisa?", answer: "Da Vinci" },
-    { category: "Arte", question: "¿Quién escribió Hamlet?", answer: "Shakespeare" },
-    
-    // ENTRETENIMIENTO
-    { category: "Cine", question: "¿Nombre del ogro verde de Dreamworks?", answer: "Shrek" },
-    { category: "Comics", question: "¿Alter ego de Batman?", answer: "Bruce Wayne" },
-    { category: "Música", question: "¿El Rey del Pop?", answer: "Michael Jackson" },
-    
-    // DEPORTES
-    { category: "Deportes", question: "¿Deporte rey en Brasil?", answer: "Fútbol" },
-    { category: "Deportes", question: "¿Cuántos jugadores tiene un equipo de fútbol?", answer: "11" },
-    { category: "Deportes", question: "¿En qué deporte se usa una raqueta?", answer: "Tenis" },
-    
-    // MATEMÁTICAS
-    { category: "Matemáticas", question: "¿Cuánto es 5 por 5?", answer: "25" },
-    { category: "Matemáticas", question: "¿Figura geométrica de 3 lados?", answer: "Triángulo" }
+  { category: "Historia", question: "¿Qué civilización construyó Machu Picchu?", answer: "Inca" },
+  { category: "Geografía", question: "¿Cuál es la capital de Canadá?", answer: "Ottawa" },
+  { category: "Ciencia", question: "¿Qué planeta es conocido como el planeta rojo?", answer: "Marte" },
+  { category: "Literatura", question: "¿Quién es el autor de 1984?", answer: "George Orwell" },
+  { category: "Arte", question: "¿En qué país se originó el Renacimiento?", answer: "Italia" },
+  { category: "Historia", question: "¿En qué año llegó Cristóbal Colón a América?", answer: "1492" },
+  { category: "Geografía", question: "¿Cuál es el océano más grande del mundo?", answer: "Pacífico" },
+  { category: "Ciencia", question: "¿Qué gas es esencial para la respiración humana?", answer: "Oxígeno" },
+  { category: "Cine", question: "¿Qué actor interpretó a Forrest Gump?", answer: "Tom Hanks" },
+  { category: "Música", question: "¿Qué banda lanzó el álbum The Dark Side of the Moon?", answer: "Pink Floyd" },
+
+  { category: "Historia", question: "¿En qué año comenzó la Segunda Guerra Mundial?", answer: "1939" },
+  { category: "Geografía", question: "¿Qué país tiene la mayor cantidad de volcanes activos?", answer: "Indonesia" },
+  { category: "Ciencia", question: "¿Qué hormona regula el azúcar en la sangre?", answer: "Insulina" },
+  { category: "Literatura", question: "¿Quién escribió El principito?", answer: "Antoine de Saint-Exupéry" },
+  { category: "Arte", question: "¿A qué corriente artística perteneció Salvador Dalí?", answer: "Surrealismo" },
+
+  { category: "Historia", question: "¿Qué país fue el primero en conceder el voto femenino?", answer: "Nueva Zelanda" },
+  { category: "Geografía", question: "¿Cuál es la capital de Corea del Sur?", answer: "Seúl" },
+  { category: "Ciencia", question: "¿Qué sistema del cuerpo humano transporta la sangre?", answer: "Sistema circulatorio" },
+  { category: "Cine", question: "¿Qué actor interpretó al Joker en The Dark Knight?", answer: "Heath Ledger" },
+  { category: "Música", question: "¿Quién es conocido como El Rey del Rock and Roll?", answer: "Elvis Presley" },
+
+  { category: "Historia", question: "¿Quién lideró la primera vuelta al mundo?", answer: "Fernando de Magallanes" },
+  { category: "Geografía", question: "¿Cuál es la capital de Suiza?", answer: "Berna" },
+  { category: "Ciencia", question: "¿Qué célula transporta oxígeno en la sangre?", answer: "Glóbulo rojo" },
+  { category: "Literatura", question: "¿Quién escribió La Divina Comedia?", answer: "Dante Alighieri" },
+  { category: "Arte", question: "¿Qué arquitecto diseñó la Sagrada Familia?", answer: "Antoni Gaudí" },
+
+  { category: "Historia", question: "¿Qué tratado puso fin a la Primera Guerra Mundial?", answer: "Tratado de Versalles" },
+  { category: "Geografía", question: "¿Cuál es el río más largo del mundo?", answer: "Amazonas" },
+  { category: "Ciencia", question: "¿Qué vitamina es esencial para la visión nocturna?", answer: "Vitamina A" },
+  { category: "Cine", question: "¿Quién interpretó a Batman en The Dark Knight?", answer: "Christian Bale" },
+  { category: "Música", question: "¿Qué banda lanzó el álbum Nevermind?", answer: "Nirvana" },
+
+    // === BLOQUE 2 ===
+  { category: "Historia", question: "¿Qué imperio tuvo como capital Constantinopla?", answer: "Imperio Bizantino" },
+  { category: "Geografía", question: "¿Cuál es el país más pequeño del mundo?", answer: "Ciudad del Vaticano" },
+  { category: "Ciencia", question: "¿Qué órgano produce la insulina?", answer: "Páncreas" },
+  { category: "Literatura", question: "¿Quién escribió Crimen y castigo?", answer: "Fiódor Dostoyevski" },
+  { category: "Arte", question: "¿Qué escultor creó El David?", answer: "Miguel Ángel" },
+
+  { category: "Historia", question: "¿Qué guerra enfrentó a Esparta y Atenas?", answer: "Guerra del Peloponeso" },
+  { category: "Geografía", question: "¿Cuál es la capital de Australia?", answer: "Canberra" },
+  { category: "Ciencia", question: "¿Qué tipo de animal es una ballena?", answer: "Mamífero" },
+  { category: "Cine", question: "¿Qué película ganó el Óscar a Mejor Película en 1994?", answer: "Forrest Gump" },
+  { category: "Música", question: "¿Qué instrumento tocaba Jimi Hendrix?", answer: "Guitarra eléctrica" },
+
+  { category: "Historia", question: "¿Quién fue el líder del movimiento de independencia de la India?", answer: "Mahatma Gandhi" },
+  { category: "Geografía", question: "¿Qué país tiene forma de bota?", answer: "Italia" },
+  { category: "Ciencia", question: "¿Qué vitamina se obtiene principalmente del sol?", answer: "Vitamina D" },
+  { category: "Literatura", question: "¿Quién escribió La Odisea?", answer: "Homero" },
+  { category: "Arte", question: "¿Qué estilo arquitectónico es la Sagrada Familia?", answer: "Modernismo" },
+
+  { category: "Historia", question: "¿Qué imperio fue gobernado por Moctezuma II?", answer: "Imperio Mexica" },
+  { category: "Geografía", question: "¿Cuál es el país con más habitantes del mundo?", answer: "China" },
+  { category: "Ciencia", question: "¿Qué tipo de sangre es donador universal?", answer: "O negativo" },
+  { category: "Cine", question: "¿Quién interpretó a Jack Sparrow?", answer: "Johnny Depp" },
+  { category: "Música", question: "¿Quién es conocida como La Reina del Pop?", answer: "Madonna" },
+
+  { category: "Historia", question: "¿Qué tratado puso fin a la Primera Guerra Mundial?", answer: "Tratado de Versalles" },
+  { category: "Geografía", question: "¿Cuál es la montaña más alta del mundo?", answer: "Monte Everest" },
+  { category: "Ciencia", question: "¿Qué partícula tiene carga negativa?", answer: "Electrón" },
+  { category: "Literatura", question: "¿Qué novela inicia con En un lugar de la Mancha...?", answer: "Don Quijote de la Mancha" },
+  { category: "Arte", question: "¿Qué país es famoso por el teatro Kabuki?", answer: "Japón" },
+
+  { category: "Historia", question: "¿Quién fue el primer presidente de México?", answer: "Guadalupe Victoria" },
+  { category: "Geografía", question: "¿Qué mar separa Europa de África?", answer: "Mar Mediterráneo" },
+  { category: "Ciencia", question: "¿Qué órgano filtra la sangre?", answer: "Riñones" },
+  { category: "Cine", question: "¿En qué saga aparece Luke Skywalker?", answer: "Star Wars" },
+  { category: "Música", question: "¿Qué compositor escribió Las cuatro estaciones?", answer: "Antonio Vivaldi" },
+
+  { category: "Historia", question: "¿En qué año comenzó la Segunda Guerra Mundial?", answer: "1939" },
+  { category: "Geografía", question: "¿Cuál es la capital de Noruega?", answer: "Oslo" },
+  { category: "Ciencia", question: "¿Qué órgano regula el equilibrio y la coordinación?", answer: "Cerebelo" },
+  { category: "Literatura", question: "¿Quién escribió El principito?", answer: "Antoine de Saint-Exupéry" },
+  { category: "Arte", question: "¿A qué corriente artística perteneció Salvador Dalí?", answer: "Surrealismo" },
+
+  { category: "Historia", question: "¿Quién fue el líder de la Revolución Cubana?", answer: "Fidel Castro" },
+  { category: "Geografía", question: "¿Cuál es el desierto más grande del mundo?", answer: "Sahara" },
+  { category: "Ciencia", question: "¿Qué planeta tiene el mayor número de lunas conocidas?", answer: "Saturno" },
+  { category: "Cine", question: "¿Quién interpretó al Joker en The Dark Knight?", answer: "Heath Ledger" },
+  { category: "Música", question: "¿Qué banda interpretó Bohemian Rhapsody?", answer: "Queen" },
+
+    // === BLOQUE 3 ===
+  { category: "Historia", question: "¿Qué país fue el primero en conceder el voto femenino?", answer: "Nueva Zelanda" },
+  { category: "Geografía", question: "¿Cuál es la capital de Corea del Sur?", answer: "Seúl" },
+  { category: "Ciencia", question: "¿Qué sistema del cuerpo humano transporta la sangre?", answer: "Sistema circulatorio" },
+  { category: "Literatura", question: "¿Quién escribió La metamorfosis?", answer: "Franz Kafka" },
+  { category: "Arte", question: "¿Qué país es cuna del tango?", answer: "Argentina" },
+
+  { category: "Historia", question: "¿Qué tratado creó la Unión Europea?", answer: "Tratado de Maastricht" },
+  { category: "Geografía", question: "¿Qué cordillera separa Europa de Asia?", answer: "Montes Urales" },
+  { category: "Ciencia", question: "¿Qué órgano produce la bilis?", answer: "Hígado" },
+  { category: "Cine", question: "¿Qué película presenta al personaje Neo?", answer: "Matrix" },
+  { category: "Música", question: "¿Quién es conocido como El Rey del Rock and Roll?", answer: "Elvis Presley" },
+
+  { category: "Historia", question: "¿Qué país colonizó México?", answer: "España" },
+  { category: "Geografía", question: "¿Cuál es la capital de Marruecos?", answer: "Rabat" },
+  { category: "Ciencia", question: "¿Qué tipo de animal es el ornitorrinco?", answer: "Mamífero" },
+  { category: "Literatura", question: "¿Quién escribió Fahrenheit 451?", answer: "Ray Bradbury" },
+  { category: "Arte", question: "¿Qué técnica artística utilizó principalmente Diego Rivera?", answer: "Muralismo" },
+
+  { category: "Historia", question: "¿Qué guerra enfrentó a Esparta y Atenas?", answer: "Guerra del Peloponeso" },
+  { category: "Geografía", question: "¿Qué país tiene más fronteras terrestres?", answer: "China" },
+  { category: "Ciencia", question: "¿Qué vitamina es esencial para la coagulación sanguínea?", answer: "Vitamina K" },
+  { category: "Cine", question: "¿Quién interpretó a Wolverine en el cine?", answer: "Hugh Jackman" },
+  { category: "Música", question: "¿Qué instrumento es característico del jazz?", answer: "Saxofón" },
+
+  { category: "Historia", question: "¿Qué líder fue asesinado en Dallas en 1963?", answer: "John F. Kennedy" },
+  { category: "Geografía", question: "¿Qué país alberga el monte Kilimanjaro?", answer: "Tanzania" },
+  { category: "Ciencia", question: "¿Qué gas contribuye en mayor proporción al efecto invernadero?", answer: "Dióxido de carbono" },
+  { category: "Literatura", question: "¿Quién escribió Los juegos del hambre?", answer: "Suzanne Collins" },
+  { category: "Arte", question: "¿Qué país es famoso por la ópera?", answer: "Italia" },
+
+  { category: "Historia", question: "¿Qué revolución derrocó a Luis XVI?", answer: "Revolución Francesa" },
+  { category: "Geografía", question: "¿Cuál es la capital de Islandia?", answer: "Reikiavik" },
+  { category: "Ciencia", question: "¿Qué órgano controla el sistema nervioso central?", answer: "Cerebro" },
+  { category: "Cine", question: "¿Qué saga incluye la Tierra Media?", answer: "El Señor de los Anillos" },
+  { category: "Música", question: "¿Qué compositor escribió El lago de los cisnes?", answer: "Piotr Ilich Chaikovski" },
+
+  { category: "Historia", question: "¿Qué país fue dividido en Alemania Oriental y Occidental tras la Segunda Guerra Mundial?", answer: "Alemania" },
+  { category: "Geografía", question: "¿Cuál es el punto más alto de África?", answer: "Monte Kilimanjaro" },
+  { category: "Ciencia", question: "¿Qué gas es el más abundante en la atmósfera terrestre?", answer: "Nitrógeno" },
+  { category: "Literatura", question: "¿Quién escribió El retrato de Dorian Gray?", answer: "Oscar Wilde" },
+  { category: "Arte", question: "¿Qué país es famoso por el flamenco?", answer: "España" },
+
+  { category: "Historia", question: "¿Qué movimiento social abolió la esclavitud en Estados Unidos?", answer: "Abolicionismo" },
+  { category: "Geografía", question: "¿Cuál es la capital de Perú?", answer: "Lima" },
+  { category: "Ciencia", question: "¿Qué glándulas producen la adrenalina?", answer: "Glándulas suprarrenales" },
+  { category: "Cine", question: "¿Qué saga cinematográfica incluye Hogwarts?", answer: "Harry Potter" },
+  { category: "Música", question: "¿Qué banda lanzó el álbum Nevermind?", answer: "Nirvana" },
+
+  { category: "Historia", question: "¿Qué país fue gobernado por Francisco Franco?", answer: "España" },
+  { category: "Geografía", question: "¿Qué mar separa Arabia de África?", answer: "Mar Rojo" },
+  { category: "Ciencia", question: "¿Qué tipo de energía produce una central nuclear?", answer: "Energía nuclear" },
+  { category: "Literatura", question: "¿Quién escribió Ensayo sobre la ceguera?", answer: "José Saramago" },
+  { category: "Arte", question: "¿Qué país es cuna del impresionismo?", answer: "Francia" },
+
+  { category: "Historia", question: "¿Qué imperio tuvo como capital Tenochtitlan?", answer: "Imperio Mexica" },
+  { category: "Geografía", question: "¿Cuál es la capital de Bélgica?", answer: "Bruselas" },
+  { category: "Ciencia", question: "¿Qué mineral es esencial para la formación de huesos y dientes?", answer: "Calcio" },
+  { category: "Cine", question: "¿Quién interpretó a Iron Man en el MCU?", answer: "Robert Downey Jr." },
+  { category: "Música", question: "¿Qué cantante es conocido como El Sol de México?", answer: "Luis Miguel" },
+
+    // === BLOQUE 4 (FINAL / DIFÍCIL) ===
+  { category: "Historia", question: "¿Qué tratado puso fin oficialmente al Imperio Austrohúngaro tras la Primera Guerra Mundial?", answer: "Tratado de Saint-Germain" },
+  { category: "Geografía", question: "¿Qué país actual ocupó la mayor parte del antiguo Imperio hitita?", answer: "Turquía" },
+  { category: "Ciencia", question: "¿Cómo se llama la proteína que transporta oxígeno en la sangre?", answer: "Hemoglobina" },
+  { category: "Literatura", question: "¿Qué escritor latinoamericano ganó el Premio Nobel de Literatura en 1990?", answer: "Octavio Paz" },
+  { category: "Arte", question: "¿Qué pintor es considerado el máximo exponente del tenebrismo?", answer: "Caravaggio" },
+
+  { category: "Historia", question: "¿Qué revolución derrocó al zar Nicolás II de Rusia?", answer: "Revolución Rusa" },
+  { category: "Geografía", question: "¿Qué estrecho separa Asia de América?", answer: "Estrecho de Bering" },
+  { category: "Ciencia", question: "¿Qué científico formuló las leyes del movimiento planetario antes de Newton?", answer: "Johannes Kepler" },
+  { category: "Literatura", question: "¿Qué novela inicia con la frase Llámame Ismael?", answer: "Moby-Dick" },
+  { category: "Arte", question: "¿En qué ciudad se encuentra la Capilla Sixtina?", answer: "Ciudad del Vaticano" },
+
+  { category: "Historia", question: "¿Qué civilización mesoamericana desarrolló el calendario de cuenta larga?", answer: "Civilización maya" },
+  { category: "Geografía", question: "¿Qué país europeo no pertenece a la Unión Europea pero usa el euro?", answer: "Mónaco" },
+  { category: "Ciencia", question: "¿Cómo se llama el proceso mediante el cual las plantas producen su alimento?", answer: "Fotosíntesis" },
+  { category: "Literatura", question: "¿Quién escribió El proceso?", answer: "Franz Kafka" },
+  { category: "Arte", question: "¿Qué movimiento artístico buscaba representar sueños y el subconsciente?", answer: "Surrealismo" },
+
+  { category: "Historia", question: "¿Qué imperio cayó en 1453 tras la toma de Constantinopla?", answer: "Imperio Bizantino" },
+  { category: "Geografía", question: "¿Qué país africano nunca fue colonizado formalmente por Europa?", answer: "Etiopía" },
+  { category: "Ciencia", question: "¿Qué partícula subatómica determina el número atómico de un elemento?", answer: "Protón" },
+  { category: "Literatura", question: "¿Quién escribió Pedro Páramo?", answer: "Juan Rulfo" },
+  { category: "Arte", question: "¿Qué compositor es considerado el padre de la ópera?", answer: "Claudio Monteverdi" }
 ];
