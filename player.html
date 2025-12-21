@@ -32,7 +32,7 @@
         .bank-info { width:100%; background:#111; padding:15px; text-align:center; border-bottom:1px solid #333; position: relative; z-index: 50; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .bank-total-label { font-size:0.8rem; color:#888; text-transform: uppercase; letter-spacing: 1px; }
         .bank-total-val { font-size:3rem; color:var(--accent); font-weight:900; line-height: 1; text-shadow: 0 0 10px rgba(241,196,15,0.3); }
-        
+
         /* ESTILO PREGUNTA EN PANTALLA JUGADOR */
         .player-question-box { width: 90%; margin-top: 10px; padding: 10px; text-align: center; color: #aaa; font-size: 0.9rem; border-bottom: 1px solid #333; display: none; /* Se activa con JS si se quiere mostrar */ }
 
@@ -105,7 +105,7 @@
             <div id="headerSubTitle" class="app-subtitle">Bienvenido al juego</div>
             <div id="playerQBox" class="player-question-box"></div>
         </div>
-        <div id="miniTimer" class="header-timer">20</div>
+        <div id="miniTimer" class="header-timer">03:00</div>
     </header>
 
     <div id="loginScreen" class="screen active">
@@ -256,10 +256,9 @@
 
             // --- CORRECCIÓN: INTRO FINAL TIENE PRIORIDAD SOBRE ELIMINADOS ---
             if (phase === 'final_intro') {
-                // Forzamos mostrar pantalla de penales de fondo (o juego) pero con el overlay
                 els.penalty.classList.add('active');
                 els.introFinal.style.display = 'flex';
-                return; // Cortamos ejecución para que el estado de eliminado no lo oculte
+                return; 
             }
 
             if (isEliminated) {
@@ -317,7 +316,6 @@
             } 
             else if (els.penalty.classList.contains('active') && !isEliminated) {
                 els.loserFinal.style.display = 'flex';
-                // MENSAJE AJUSTADO
                 els.lMsg.innerHTML = `${myName},<br>GRACIAS POR PARTICIPAR.<br>PERO HAS PERDIDO EN LA FINAL DE<br><span style="color:var(--primary); font-weight:bold;">EL RIVAL MÁS DÉBIL</span>`;
             } 
             else {
@@ -345,21 +343,17 @@
             }
         });
 
+        // CORRECCIÓN: Lógica mm:ss
         socket.on('timerUpdate', t => {
             const minutes = Math.floor(t / 60);
             const seconds = t % 60;
             const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             
             els.miniTimer.innerText = timeString;
-        
-            // Ajuste de colores según el tiempo restante
-            if(t <= 10) {
-                els.miniTimer.className = 'header-timer timer-crit';
-            } else if(t <= 30) { // Ahora que el tiempo es más largo, el aviso empieza a los 30s
-                els.miniTimer.className = 'header-timer timer-warn';
-            } else {
-                els.miniTimer.className = 'header-timer';
-            }
+
+            if(t <= 10) els.miniTimer.className = 'header-timer timer-crit';
+            else if(t <= 30) els.miniTimer.className = 'header-timer timer-warn';
+            else els.miniTimer.className = 'header-timer';
         });
 
         socket.on('phaseChanged', (phase) => {
@@ -451,4 +445,3 @@
     </script>
 </body>
 </html>
-
