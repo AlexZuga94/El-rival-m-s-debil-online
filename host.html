@@ -238,7 +238,8 @@
             const sound = new Audio(path);
             sound.loop = loop;
             sound.volume = 0.5; 
-            
+
+            // Si tiene una cadena (como del timer a la plática)
             if (chainTo) {
                 sound.onended = () => { playAudioFile(chainTo, true); };
             }
@@ -266,8 +267,9 @@
                 currentMusic.onended = null; 
                 currentMusic = null;
                 currentFileName = ""; 
-                updateDebug("Silencio", "#888");
+                updateDebug("Silencio Total", "#ff6666");
             }
+            updateDebug("Silencio", "#888");
         }
 
         function playRoundMusic() {
@@ -590,4 +592,5 @@
     </script>
 </body>
 </html>
+
 
