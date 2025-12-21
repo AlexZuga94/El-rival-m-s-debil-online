@@ -343,7 +343,7 @@
         socket.on('phaseChanged', phase => {
             activePhase = phase;
 
-            if (phase === 'waiting' || phase === 'times_up' || phase === 'voting') {
+            if (phase === 'waiting' || phase === 'voting') {
                 stopMusic(); 
             }
             if (phase === 'times_up') playSfx('wrong');
@@ -549,3 +549,4 @@
     </script>
 </body>
 </html>
+
