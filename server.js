@@ -2,6 +2,10 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
+const socket = io();
+    let activePlayersCount = 0; 
+    let activePhase = 'waiting'; // <--- AGREGA ESTO AL INICIO DE TU SCRIPT
+
 // IMPORTAR PREGUNTAS DESDE EL ARCHIVO EXTERNO
 const questionsList = require('./questions');
 
@@ -348,3 +352,4 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
