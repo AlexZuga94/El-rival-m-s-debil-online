@@ -50,11 +50,8 @@
         .alert-elim { background: var(--danger); color: white; }
         .alert-tie { background: var(--accent); color: black; }
 
-        .q-text { font-size:1.8rem; font-weight:bold; line-height:1.3; margin-bottom: 20px; }
-        .a-text { font-size:1.5rem; color:var(--success); background:rgba(0,255,157,0.1); padding:5px 20px; border-radius:20px; }
-        .cat-text { font-size: 1rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; font-weight: bold; }
-
-        .winner-banner { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; animation: fadeIn 1s ease; }
+        /* ESTILOS DEL GANADOR (Z-INDEX ALTO PARA QUE SE VEA SIEMPRE) */
+        .winner-banner { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; animation: fadeIn 1s ease; position: absolute; top:0; left:0; background: rgba(0,0,0,0.9); z-index: 100; border-radius: 8px; }
         .wb-title { color: var(--accent); font-size: 1.2rem; letter-spacing: 3px; font-weight: 900; margin-bottom: 15px; text-transform: uppercase; }
         .wb-name { font-size: 4rem; font-weight: 900; color: white; text-shadow: 0 0 30px var(--primary); margin-bottom: 20px; line-height: 1; }
         .wb-amount-label { color: #888; font-size: 0.9rem; text-transform: uppercase; }
@@ -96,7 +93,6 @@
 
         #audioDebug { font-size: 0.7rem; color: #555; position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 5px; pointer-events: none; }
         @keyframes fadeIn { from{opacity:0; transform: translateY(20px);} to{opacity:1; transform: translateY(0);} }
-        @keyframes pulse { 0%{opacity:0.6} 50%{opacity:1} 100%{opacity:0.6} }
     </style>
 </head>
 <body>
@@ -119,7 +115,6 @@
     <div class="main-grid">
         <div class="panel">
             <small style="color:#888">CONTROL PRINCIPAL</small>
-            
             <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
             <button id="btnJuguemos" class="btn btn-phrase" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
             
@@ -210,8 +205,9 @@
         let activePlayersCount = 0; 
         let activePhase = 'waiting'; 
         let currentRound = 1;
+        let isGameOver = false; // BANDERA PARA PROTEGER AL GANADOR
 
-        // --- MOTOR DE AUDIO AVANZADO ---
+        // --- MOTOR DE AUDIO ---
         let currentMusic = null;
         let currentFileName = "";
         const debugEl = document.getElementById('audioDebug');
@@ -221,35 +217,27 @@
             debugEl.style.color = color;
         }
 
-        // Función para reproducir música (Background)
-        // Soporta encadenamiento (chainTo): qué tocar cuando termine
-        function playAudioFile(fileName, loop = false, chainTo = null) {
-            // Evitar reinicio si ya suena lo mismo
-            if (currentMusic && currentFileName === fileName && !currentMusic.paused) {
-                return;
-            }
+        // playAudioFile: Ahora acepta "mix" para NO pausar el anterior (empalmar)
+        function playAudioFile(fileName, loop = false, mix = false, chainTo = null) {
+            // Si ya suena esa canción, no hacer nada
+            if (currentMusic && currentFileName === fileName && !currentMusic.paused) return;
 
-            // Si hay otra música sonando, la paramos
-            if (currentMusic) {
+            // Si NO es mix, paramos la música anterior
+            if (currentMusic && !mix) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
-                // Importante: Limpiar el onended anterior para no disparar cadenas viejas
                 currentMusic.onended = null; 
             }
             
             const path = '/SOUNDS/' + fileName;
-            updateDebug("Intentando: " + fileName, "#0ff");
+            updateDebug("Play: " + fileName + (mix ? " (Mix)" : ""), "#0ff");
             
             const sound = new Audio(path);
             sound.loop = loop;
             sound.volume = 0.5; 
             
-            // Lógica de encadenamiento (Cuando termine A, suena B)
             if (chainTo) {
-                sound.onended = () => {
-                    console.log("Audio terminado, encadenando a: " + chainTo);
-                    playAudioFile(chainTo, true); // El siguiente suele ser loop (platica o final)
-                };
+                sound.onended = () => { playAudioFile(chainTo, true); };
             }
             
             sound.play()
@@ -262,14 +250,17 @@
                     currentFileName = "";
                 });
                 
-            currentMusic = sound;
+            // Si no es mix, este es el nuevo "Master Music". Si es mix, corre en paralelo.
+            if (!mix) {
+                currentMusic = sound;
+            }
         }
 
         function stopMusic() {
             if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
-                currentMusic.onended = null; // Romper cadenas pendientes
+                currentMusic.onended = null; 
                 currentMusic = null;
                 currentFileName = ""; 
                 updateDebug("Silencio", "#888");
@@ -278,45 +269,38 @@
 
         function playRoundMusic() {
             let seconds = 0;
-            if (activePlayersCount === 2) {
-                seconds = 90; 
-            } else {
-                seconds = 180 - ((currentRound - 1) * 10);
-            }
+            if (activePlayersCount === 2) seconds = 90; 
+            else seconds = 180 - ((currentRound - 1) * 10);
             
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
             const id = `${mins}${secs.toString().padStart(2, '0')}`;
             const fileName = `timer_${id}.mp3`;
             
-            // AQUÍ ESTÁ LA MAGIA: 
-            // Reproduce timer_xxx y cuando acabe, salta automáticamente a platica.mp3
-            playAudioFile(fileName, false, 'platica.mp3');
+            playAudioFile(fileName, false);
         }
         
-        // Efectos de Sonido (SFX) - Se mezclan, NO paran la música
         const sfx = {
             correct: new Audio('/SOUNDS/correct.mp3'),
             wrong: new Audio('/SOUNDS/wrong.mp3'),
             bank: new Audio('/SOUNDS/bank.mp3'),
-            eliminado: new Audio('/SOUNDS/eliminado.mp3'), // Nombre corregido
-            ganador: new Audio('/SOUNDS/ganador.mp3'), // Nombre corregido
+            eliminado: new Audio('/SOUNDS/eliminado.mp3'),
+            ganador: new Audio('/SOUNDS/ganador.mp3'),
             juguemos: new Audio('/SOUNDS/juguemos.mp3'),
-            votando: new Audio('/SOUNDS/votando.mp3') // Nuevo
+            votando: new Audio('/SOUNDS/votando.mp3')
         };
 
         function playSfx(name) {
             if (sfx[name]) {
                 sfx[name].currentTime = 0;
-                sfx[name].play().catch(e => updateDebug("SFX bloqueado, clickea pantalla", "#f00"));
+                sfx[name].play().catch(e => {});
             }
         }
 
         // --- SECUENCIA DE FINAL ---
         function playFinalSequence() {
-            stopMusic(); // Silencio total
-            // Reproduce anuncio y luego loop de jugando_final
-            playAudioFile('anuncio_final.mp3', false, 'jugando_final.mp3');
+            stopMusic(); 
+            playAudioFile('anuncio_final.mp3', false, false, 'jugando_final.mp3');
         }
 
         const els = {
@@ -329,7 +313,6 @@
             winnerBanner: document.getElementById('winnerBanner'),
             winnerName: document.getElementById('winnerName'),
             winnerAmount: document.getElementById('winnerAmount'),
-            
             turn: document.getElementById('turnDisplay'),
             round: document.getElementById('roundDisplay'),
             rank: document.getElementById('rankingList'),
@@ -358,7 +341,7 @@
             p2Ovals: document.getElementById('penP2Ovals')
         };
 
-        function setPhase(p) { socket.emit('setPhase', p); }
+        function setPhase(p) { if(!isGameOver) socket.emit('setPhase', p); }
         function eliminate() {
             const val = els.elSelect.value;
             if(val && confirm(`¿Eliminar a ${val}?`)) {
@@ -374,38 +357,41 @@
         });
         
         socket.on('phaseChanged', phase => {
+            // SI EL JUEGO ACABÓ, NO PERMITIMOS CAMBIOS VISUALES QUE OCULTEN AL GANADOR
+            if (isGameOver) return; 
+
             activePhase = phase;
 
-            // Lógica de Audio por Fases
-            
+            // --- LÓGICA DE AUDIO AJUSTADA ---
+
             if (phase === 'questions') {
-                playRoundMusic(); // Timer -> Platica
+                playRoundMusic(); 
             }
             
-            else if (phase === 'voting') {
-                // NO paramos música (sigue platica.mp3 de fondo)
-                playSfx('votando'); // Suena encima
-            }
-            
-            else if (phase === 'final_intro' || phase === 'penalty') {
-                // Detectamos inicio de la final
-                if (currentFileName !== 'jugando_final.mp3' && currentFileName !== 'anuncio_final.mp3') {
-                    playFinalSequence();
-                }
-            }
-            
-            // Solo paramos música si volvemos a 'waiting' (lobby)
-            else if (phase === 'waiting') {
-                // Opcional: Podrías poner música de lobby aquí
-                stopMusic(); 
+            else if (phase === 'times_up') {
+                // CORRECCIÓN 1: Empalmar audio de plática sin parar timer
+                playAudioFile('platica.mp3', true, true); // mix = true
             }
 
-            // RESETEAR VISTA PREGUNTA
+            else if (phase === 'voting') {
+                playSfx('votando');
+                // No paramos platica.mp3
+            }
+            
+            else if (phase === 'waiting') {
+                // CORRECCIÓN 2: No paramos música en espera para que siga sonando Platica
+                // Solo si venimos de un reset podríamos parar, pero por flujo normal, dejamos sonar.
+            }
+
+            else if (phase === 'final_intro') {
+                playFinalSequence();
+            }
+            
+            // --- ACTUALIZACIÓN VISUAL ---
             els.winnerBanner.style.display = 'none'; 
             els.qCat.style.display = 'block';
             els.qText.style.display = 'block';
             els.aText.style.display = 'block';
-
             els.preFinal.style.display = 'none'; 
 
             [els.btnWait, els.btnQ, els.btnVote, els.btnElim, els.btnPen].forEach(b => {
@@ -440,39 +426,32 @@
             else if (phase === 'questions') {
                 els.btnQ.classList.add('active');
                 els.btnVote.classList.add('btn-next-step');
-                els.btnElim.disabled = true;
-                els.btnVote.disabled = true;
-                els.btnElim.disabled = true;
-                els.btnPen.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = false);
             } 
             else if (phase === 'voting' || phase === 'times_up') {
                 els.btnVote.classList.add('active');
                 els.btnElim.classList.add('btn-next-step');
-                els.btnQ.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = true);
             } 
             else if (phase === 'elimination') {
                 els.btnElim.classList.add('active');
                 els.btnQ.classList.add('btn-next-step');
-                els.btnVote.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = true);
             }
             else if (phase === 'penalty') {
                 els.btnPen.classList.add('active');
-                els.btnWait.disabled = true;
-                els.btnQ.disabled = true;
-                els.btnVote.disabled = true;
-                els.btnElim.disabled = true;
                 els.gameBtns.forEach(b => b.disabled = false);
                 els.btnBankOnly.disabled = true;
             }
         });
 
         socket.on('finalWinner', data => {
+            isGameOver = true; // BLOQUEAR CAMBIOS DE FASE
             stopMusic();
-            playSfx('ganador'); // Fanfarria final
+            playSfx('ganador');
             
+            // Forzar vista del banner
+            els.qArea.style.display = 'flex'; 
             els.qCat.style.display = 'none';
             els.qText.style.display = 'none';
             els.aText.style.display = 'none';
@@ -487,7 +466,6 @@
         socket.on('bankState', s => {
             const currentVal = parseInt(els.bankTotal.innerText.replace('$','')) || 0;
             if (s.bankedTotal > currentVal) playSfx('bank');
-            
             els.bankTotal.innerText = `$${s.bankedTotal}`;
             els.bankRound.innerText = `$${s.bankedRound}`;
             els.bankBtnVal.innerText = `$${s.currentChainValue}`;
@@ -524,10 +502,7 @@
             }
         });
 
-        socket.on('roundUpdate', r => {
-            currentRound = r;
-            els.round.innerText = r;
-        });
+        socket.on('roundUpdate', r => { currentRound = r; els.round.innerText = r; });
         
         socket.on('playersUpdated', players => {
             activePlayersCount = players.length; 
@@ -579,36 +554,28 @@
             }
         });
         
-        // SONIDO ELIMINADO: Se mezcla con la música de fondo
+        // SONIDO ELIMINADO: Se mezcla encima de 'platica.mp3' (porque no paramos música en waiting)
         socket.on('playerEliminated', () => playSfx('eliminado'));
 
         socket.on('finalState', final => {
             els.p1Name.innerText = final.p1.name;
             els.p2Name.innerText = final.p2.name;
-            
             els.p1Ovals.innerHTML = '';
             const maxSlots = Math.max(5, final.p1.history.length + 1);
             for(let i=0; i<maxSlots; i++) {
                 const div = document.createElement('div');
                 div.className = 'oval';
-                if (i < final.p1.history.length) {
-                    div.classList.add(final.p1.history[i] ? 'correct' : 'wrong');
-                } else if (i === final.p1.history.length && final.turn === 0) {
-                    div.classList.add('current');
-                }
+                if (i < final.p1.history.length) div.classList.add(final.p1.history[i] ? 'correct' : 'wrong');
+                else if (i === final.p1.history.length && final.turn === 0) div.classList.add('current');
                 els.p1Ovals.appendChild(div);
             }
-
             els.p2Ovals.innerHTML = '';
             const maxSlots2 = Math.max(5, final.p2.history.length + 1);
             for(let i=0; i<maxSlots2; i++) {
                 const div = document.createElement('div');
                 div.className = 'oval';
-                if (i < final.p2.history.length) {
-                    div.classList.add(final.p2.history[i] ? 'correct' : 'wrong');
-                } else if (i === final.p2.history.length && final.turn === 1) {
-                    div.classList.add('current');
-                }
+                if (i < final.p2.history.length) div.classList.add(final.p2.history[i] ? 'correct' : 'wrong');
+                else if (i === final.p2.history.length && final.turn === 1) div.classList.add('current');
                 els.p2Ovals.appendChild(div);
             }
         });
