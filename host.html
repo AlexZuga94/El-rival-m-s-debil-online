@@ -190,32 +190,68 @@
     <script>
         const socket = io();
 
-        // --- MOTOR DE AUDIO ---
-const audioLibrary = {}; 
+        // --- MOTOR DE AUDIO INTELIGENTE ---
+    const audioLibrary = {}; 
+    let currentMusic = null;
+    let roundMusicStarted = false; // Para que no se reinicie cada segundo
 
-// Función para registrar un sonido
-function loadSound(id, fileName) {
-    audioLibrary[id] = new Audio('/SOUNDS/' + fileName);
-}
+    // Función base para cargar/reproducir
+    function playAudioFile(fileName, loop = false) {
+        // Detener lo que estaba sonando antes
+        if (currentMusic) {
+            currentMusic.pause();
+            currentMusic.currentTime = 0;
+        }
 
-// Función para reproducir
-function playAudio(id, loop = false) {
-    const sound = audioLibrary[id];
-    if (sound) {
+        // Crear y reproducir el nuevo
+        // NOTA: Usamos la carpeta SOUNDS (mayúsculas) como indicaste
+        const sound = new Audio('/SOUNDS/' + fileName);
         sound.loop = loop;
-        sound.currentTime = 0; // Reinicia el audio si ya estaba sonando
-        sound.play().catch(e => console.log("Audio bloqueado: Haz clic en la pantalla primero"));
+        sound.volume = 0.5; // Ajusta el volumen aquí si quieres
+        
+        sound.play().catch(e => console.log("Audio bloqueado (haz clic en pantalla)"));
+        currentMusic = sound;
     }
-}
 
-// Función para detener (útil para la música de fondo)
-function stopAudio(id) {
-    const sound = audioLibrary[id];
-    if (sound) {
-        sound.pause();
-        sound.currentTime = 0;
+    function stopMusic() {
+        if (currentMusic) {
+            currentMusic.pause();
+            currentMusic.currentTime = 0;
+            currentMusic = null;
+        }
     }
-}
+
+    // --- MAGIA: CONVERTIR SEGUNDOS A TU NOMBRE DE ARCHIVO ---
+    function playTimerMusic(seconds) {
+        // Calculamos minutos y segundos
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        
+        // Formateamos: 3 y 0 -> "300", 1 y 30 -> "130"
+        const id = `${mins}${secs.toString().padStart(2, '0')}`;
+        
+        // Nombre final del archivo
+        const fileName = `timer_${id}.mp3`;
+        
+        console.log("Reproduciendo:", fileName); // Para depurar
+        playAudioFile(fileName, false); // false porque tus audios ya duran lo que deben durar
+    }
+    
+    // SFX (Sonidos cortos que pueden sonar encima de la música)
+    const sfx = {
+        correct: new Audio('/SOUNDS/correct.mp3'),
+        wrong: new Audio('/SOUNDS/wrong.mp3'),
+        bank: new Audio('/SOUNDS/bank.mp3'),
+        eliminated: new Audio('/SOUNDS/eliminated.mp3'),
+        winner: new Audio('/SOUNDS/winner.mp3')
+    };
+
+    function playSfx(name) {
+        if (sfx[name]) {
+            sfx[name].currentTime = 0;
+            sfx[name].play().catch(e => {});
+        }
+    }
         let activePlayersCount = 0; 
 
         const els = {
@@ -455,4 +491,5 @@ function stopAudio(id) {
     </script>
 </body>
 </html>
+
 
