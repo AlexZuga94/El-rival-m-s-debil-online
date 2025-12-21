@@ -17,6 +17,16 @@ const TIME_REDUCTION_PER_ROUND = 10;
 const FINAL_DUEL_TIME = 90;    // 1:30 para final
 const CHAIN_VALUES = [1, 2, 5, 10, 20, 50, 100]; 
 
+const getCurrentPlayer = () => {
+    if (gameState.phase === 'penalty' || gameState.phase === 'final_intro') {
+        return gameState.final.turn === 0 ? gameState.final.p1.name : gameState.final.p2.name;
+    }
+    // Seguridad: si no hay jugadores en la lista de turnos
+    if (!gameState.turnOrder || gameState.turnOrder.length === 0) return "Nadie";
+    
+    return gameState.turnOrder[gameState.turnIndex % gameState.turnOrder.length] || "Nadie";
+};
+
 let gameState = {
     players: [],
     turnOrder: [],
@@ -192,6 +202,45 @@ function startTimer() {
 }
 
 io.on("connection", (socket) => {
+
+    // --- MANEJO DE DESCONEXIONES (SALIDA PERMANENTE) ---
+    socket.on("disconnect", () => {
+        const name = playerSockets[socket.id];
+        if (name) {
+            console.log(`⚠️ Jugador fuera del juego por desconexión: ${name}`);
+            
+            // Verificamos si era su turno antes de borrarlo
+            const wasHisTurn = (getCurrentPlayer() === name);
+
+            // 1. Lo borramos de todas las listas de juego
+            gameState.players = gameState.players.filter(p => p !== name);
+            gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
+            
+            // 2. Si era su turno en ronda de preguntas, saltamos al siguiente
+            if (wasHisTurn && gameState.phase === "questions") {
+                if (gameState.turnOrder.length > 0) {
+                    // Re-ajustamos el índice para que no se salte a nadie por el hueco dejado
+                    if (gameState.turnIndex >= gameState.turnOrder.length) {
+                        gameState.turnIndex = 0;
+                    }
+                    getNextRandomQuestion();
+                } else {
+                    // Si ya no queda nadie vivo
+                    clearInterval(timerInterval);
+                    gameState.phase = "waiting";
+                }
+            }
+
+            // 3. Limpiamos sus datos de conexión
+            delete playerSockets[socket.id];
+
+            // 4. Avisamos a todos (Host y Jugadores restantes)
+            io.emit("playerEliminated", name); // Esto activará el sonido en el Host
+            io.emit("playersUpdated", gameState.players);
+            updateRanking();
+            broadcastState();
+        }
+    });
     socket.emit("phaseChanged", gameState.phase);
     socket.emit("playersUpdated", gameState.players);
     socket.emit("timerUpdate", gameState.timer);
@@ -391,6 +440,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
 
 
