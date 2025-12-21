@@ -117,6 +117,8 @@
             <small style="color:#888">CONTROL PRINCIPAL</small>
             <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
             <button id="btnJuguemos" class="btn btn-phrase" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
+
+            <button class="btn" style="background: #ff9800; color: white;" onclick="stopPlaticaOnly()">🔇 CALLAR PLÁTICA</button>
             
             <small style="color:#888; margin-top:5px;">FASES</small>
             <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
@@ -296,6 +298,26 @@
                 sfx[name].play().catch(e => {});
             }
         }
+
+        function stopPlaticaOnly() {
+    // Buscamos todos los elementos de audio que el navegador ha creado
+    const allAudios = document.querySelectorAll('audio');
+    
+    allAudios.forEach(audio => {
+        // Verificamos si la fuente del archivo incluye 'platica'
+        if (audio.src.includes('platica.mp3')) {
+            audio.pause();
+            audio.currentTime = 0; // Reiniciamos el tiempo
+            updateDebug("Plática silenciada", "#ff9800");
+        }
+    });
+
+    // También limpiamos la referencia si era la música principal actual
+    if (currentFileName === 'platica.mp3') {
+        currentMusic = null;
+        currentFileName = "";
+    }
+}
 
         // --- SECUENCIA DE FINAL ---
         function playFinalSequence() {
@@ -587,3 +609,4 @@
     </script>
 </body>
 </html>
+
