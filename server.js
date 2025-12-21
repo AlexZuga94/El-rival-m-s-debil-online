@@ -2,10 +2,6 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
-const socket = io();
-    let activePlayersCount = 0; 
-    let activePhase = 'waiting'; // <--- AGREGA ESTO AL INICIO DE TU SCRIPT
-
 // IMPORTAR PREGUNTAS DESDE EL ARCHIVO EXTERNO
 const questionsList = require('./questions');
 
@@ -46,16 +42,13 @@ let playerSockets = {};
 
 // --- LÓGICA SIN REPETIR PREGUNTAS ---
 function getNextRandomQuestion() {
-    // 1. Filtrar las que NO se han usado
     let available = questionsList.filter(q => !gameState.usedQuestions.includes(q.question));
     
-    // Si se acaban, reiniciamos memoria
     if (available.length === 0) {
         gameState.usedQuestions = [];
         available = questionsList;
     }
     
-    // 2. Intentar no repetir categoría
     let candidates = available.filter(q => q.category !== gameState.lastCategory);
     if (candidates.length === 0) candidates = available;
     
@@ -64,7 +57,7 @@ function getNextRandomQuestion() {
     
     gameState.lastCategory = selected.category;
     gameState.currentQuestion = selected;
-    gameState.usedQuestions.push(selected.question); // Marcar como usada
+    gameState.usedQuestions.push(selected.question); 
     
     return selected;
 }
@@ -204,10 +197,6 @@ io.on("connection", (socket) => {
     socket.emit("timerUpdate", gameState.timer);
     broadcastState();
 
-    socket.on('phaseChanged', phase => {
-        activePhase = phase; // <--- AGREGA ESTO
-        roundMusicStarted = false;
-    
     socket.on("registerPlayer", (name) => {
         const cleanName = name.trim().toUpperCase();
         if (!gameState.players.includes(cleanName)) {
@@ -356,5 +345,3 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
-
-
