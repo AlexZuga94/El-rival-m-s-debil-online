@@ -117,6 +117,9 @@
             <small style="color:#888">CONTROL PRINCIPAL</small>
             <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
             <button id="btnJuguemos" class="btn btn-phrase" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
+
+            <button class="btn" style="background: #444; color: white;" onclick="playAudioFile('platica.mp3', true)">💬 FORZAR PLÁTICA</button>
+            <button class="btn" style="background: #f44336; color: white;" onclick="stopMusic()">🔇 SILENCIO TOTAL</button>
             
             <small style="color:#888; margin-top:5px;">FASES</small>
             <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
@@ -587,3 +590,4 @@
     </script>
 </body>
 </html>
+
