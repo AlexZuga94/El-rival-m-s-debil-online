@@ -221,10 +221,18 @@
 
         // playAudioFile: Ahora acepta "mix" para NO pausar el anterior (empalmar)
         function playAudioFile(fileName, loop = false, mix = false, chainTo = null) {
-            // Si ya suena esa canción, no hacer nada
-            if (currentMusic && currentFileName === fileName && !currentMusic.paused) return;
+            // --- CANDADO DE SEGURIDAD PARA EVITAR DUPLICADOS ---
+            if (fileName === 'platica.mp3') {
+                // Buscamos si ya existe un audio de platica sonando
+                const existingPlatica = Array.from(document.querySelectorAll('audio'))
+                                             .find(a => a.src.includes('platica.mp3'));
+                if (existingPlatica && !existingPlatica.paused) {
+                    console.log("La plática ya está sonando, no la duplicamos.");
+                    return; // SALIMOS DE LA FUNCIÓN, no hacemos nada
+                }
+            }
 
-            // Si NO es mix, paramos la música anterior
+            // Si NO es mix y NO es la misma plática, paramos la música anterior
             if (currentMusic && !mix) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
@@ -239,7 +247,9 @@
             sound.volume = 0.5; 
             
             if (chainTo) {
-                sound.onended = () => { playAudioFile(chainTo, true); };
+                sound.onended = () => { 
+                    playAudioFile(chainTo, true); 
+                };
             }
             
             sound.play()
@@ -248,11 +258,9 @@
                     currentFileName = fileName; 
                 })
                 .catch(e => {
-                    updateDebug("ERROR: " + e.message, "#f00");
-                    currentFileName = "";
+                    updateDebug("Error de Audio", "#f00");
                 });
                 
-            // Si no es mix, este es el nuevo "Master Music". Si es mix, corre en paralelo.
             if (!mix) {
                 currentMusic = sound;
             }
@@ -403,8 +411,9 @@
             }
             
             else if (phase === 'times_up') {
-                // CORRECCIÓN 1: Empalmar audio de plática sin parar timer
-                playAudioFile('platica.mp3', true, true); // mix = true
+                // Ya no necesitamos llamar a playAudioFile aquí 
+                // porque el timer_xxx.mp3 tiene un onended que llama a platica.mp3
+                updateDebug("Tiempo agotado - Entrando plática", "#ffcc00");
             }
 
             else if (phase === 'voting') {
@@ -624,6 +633,7 @@
     </script>
 </body>
 </html>
+
 
 
 
