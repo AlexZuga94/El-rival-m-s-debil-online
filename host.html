@@ -210,7 +210,7 @@
         let currentRound = 1;
         let isGameOver = false; // BANDERA PARA PROTEGER AL GANADOR
 
-        // --- MOTOR DE AUDIO DEFINITIVO ---
+        // --- MOTOR DE AUDIO ---
         let currentMusic = null;
         let currentFileName = "";
         const debugEl = document.getElementById('audioDebug');
@@ -221,24 +221,24 @@
         }
 
         function playAudioFile(fileName, loop = false, mix = false, chainTo = null) {
-            // Si es la misma música y ya está sonando, no interrumpir
+            // Si ya suena esa canción exactamente, no hacemos nada (evita tartamudeo)
             if (currentMusic && currentFileName === fileName && !currentMusic.paused) return;
 
-            // Si NO es mix, detenemos lo que sea que esté sonando antes de iniciar lo nuevo
+            // Si NO es un efecto mezclado (mix), paramos lo que sea que esté sonando
             if (currentMusic && !mix) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
-                currentMusic.onended = null;
+                currentMusic.onended = null; 
             }
             
             const path = '/SOUNDS/' + fileName;
-            updateDebug("Play: " + fileName, "#0ff");
+            updateDebug("Play: " + fileName + (mix ? " (Mix)" : ""), "#0ff");
             
             const sound = new Audio(path);
             sound.loop = loop;
             sound.volume = 0.5; 
             
-            // Lógica de encadenamiento (Ej: Timer -> Platica)
+            // Si tiene una cadena (como del timer a la plática)
             if (chainTo) {
                 sound.onended = () => { playAudioFile(chainTo, true); };
             }
@@ -249,14 +249,26 @@
                     currentFileName = fileName; 
                 })
                 .catch(e => {
-                    updateDebug("Error de Audio", "#f00");
+                    updateDebug("ERROR: " + e.message, "#f00");
+                    currentFileName = "";
                 });
                 
-            // IMPORTANTE: Guardamos siempre la referencia en currentMusic 
-            // para que el botón de silencio pueda encontrarlo.
-            if (!mix || fileName === 'platica.mp3') {
+            if (!mix) {
                 currentMusic = sound;
             }
+        }
+
+        function stopMusic() {
+            if (currentMusic) {
+                currentMusic.pause();
+                currentMusic.currentTime = 0;
+                currentMusic.onended = null; 
+                currentMusic = null;
+                currentFileName = ""; 
+                updateDebug("Silencio Total", "#ff6666");
+            }
+            // También intentamos pausar cualquier audio que se haya quedado huérfante
+            updateDebug("Silencio", "#888");
         }
 
         // --- FUNCIÓN DE SILENCIO TOTAL CORREGIDA ---
@@ -571,6 +583,7 @@
     </script>
 </body>
 </html>
+
 
 
 
