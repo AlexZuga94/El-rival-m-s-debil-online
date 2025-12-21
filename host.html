@@ -210,7 +210,7 @@
         let currentRound = 1;
         let isGameOver = false; // BANDERA PARA PROTEGER AL GANADOR
 
-        // --- MOTOR DE AUDIO ---
+        // --- MOTOR DE AUDIO DEFINITIVO ---
         let currentMusic = null;
         let currentFileName = "";
         const debugEl = document.getElementById('audioDebug');
@@ -220,26 +220,25 @@
             debugEl.style.color = color;
         }
 
-        // playAudioFile: Ahora acepta "mix" para NO pausar el anterior (empalmar)
         function playAudioFile(fileName, loop = false, mix = false, chainTo = null) {
-            // Si ya suena esa canción, no hacer nada
+            // Si es la misma música y ya está sonando, no interrumpir
             if (currentMusic && currentFileName === fileName && !currentMusic.paused) return;
 
-            // Si NO es mix, paramos la música anterior
+            // Si NO es mix, detenemos lo que sea que esté sonando antes de iniciar lo nuevo
             if (currentMusic && !mix) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
-                currentMusic.onended = null; 
+                currentMusic.onended = null;
             }
             
             const path = '/SOUNDS/' + fileName;
-            updateDebug("Play: " + fileName + (mix ? " (Mix)" : ""), "#0ff");
+            updateDebug("Play: " + fileName, "#0ff");
             
             const sound = new Audio(path);
             sound.loop = loop;
             sound.volume = 0.5; 
-
-            // Si tiene una cadena (como del timer a la plática)
+            
+            // Lógica de encadenamiento (Ej: Timer -> Platica)
             if (chainTo) {
                 sound.onended = () => { playAudioFile(chainTo, true); };
             }
@@ -250,56 +249,36 @@
                     currentFileName = fileName; 
                 })
                 .catch(e => {
-                    updateDebug("ERROR: " + e.message, "#f00");
-                    currentFileName = "";
+                    updateDebug("Error de Audio", "#f00");
                 });
                 
-            // Si no es mix, este es el nuevo "Master Music". Si es mix, corre en paralelo.
-            if (!mix) {
+            // IMPORTANTE: Guardamos siempre la referencia en currentMusic 
+            // para que el botón de silencio pueda encontrarlo.
+            if (!mix || fileName === 'platica.mp3') {
                 currentMusic = sound;
             }
         }
 
+        // --- FUNCIÓN DE SILENCIO TOTAL CORREGIDA ---
         function stopMusic() {
+            // 1. Detener la música principal referenciada
             if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
-                currentMusic.onended = null; 
+                currentMusic.onended = null;
                 currentMusic = null;
-                currentFileName = ""; 
-                updateDebug("Silencio Total", "#ff6666");
             }
-            updateDebug("Silencio", "#888");
-        }
-
-        function playRoundMusic() {
-            let seconds = 0;
-            if (activePlayersCount === 2) seconds = 90; 
-            else seconds = 180 - ((currentRound - 1) * 10);
             
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            const id = `${mins}${secs.toString().padStart(2, '0')}`;
-            const fileName = `timer_${id}.mp3`;
-            
-            playAudioFile(fileName, false);
-        }
-        
-        const sfx = {
-            correct: new Audio('/SOUNDS/correct.mp3'),
-            wrong: new Audio('/SOUNDS/wrong.mp3'),
-            bank: new Audio('/SOUNDS/bank.mp3'),
-            eliminado: new Audio('/SOUNDS/eliminado.mp3'),
-            ganador: new Audio('/SOUNDS/ganador.mp3'),
-            juguemos: new Audio('/SOUNDS/juguemos.mp3'),
-            votando: new Audio('/SOUNDS/votando.mp3')
-        };
+            // 2. Apagar CUALQUIER etiqueta de audio que ande sonando en el navegador
+            // Esto es un "Mute" de emergencia que silencia todo, incluyendo platica.mp3
+            const allAudios = document.querySelectorAll('audio');
+            allAudios.forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+            });
 
-        function playSfx(name) {
-            if (sfx[name]) {
-                sfx[name].currentTime = 0;
-                sfx[name].play().catch(e => {});
-            }
+            currentFileName = ""; 
+            updateDebug("Silencio Total", "#ff4444");
         }
 
         // --- SECUENCIA DE FINAL ---
@@ -592,5 +571,6 @@
     </script>
 </body>
 </html>
+
 
 
