@@ -204,6 +204,10 @@ io.on("connection", (socket) => {
     socket.emit("timerUpdate", gameState.timer);
     broadcastState();
 
+    socket.on('phaseChanged', phase => {
+        activePhase = phase; // <--- AGREGA ESTO
+        roundMusicStarted = false;
+    
     socket.on("registerPlayer", (name) => {
         const cleanName = name.trim().toUpperCase();
         if (!gameState.players.includes(cleanName)) {
@@ -352,4 +356,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
