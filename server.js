@@ -72,12 +72,6 @@ function getNextRandomQuestion() {
     return selected;
 }
 
-const getCurrentPlayer = () => {
-    if (gameState.phase === 'penalty' || gameState.phase === 'final_intro') {
-        return gameState.final.turn === 0 ? gameState.final.p1.name : gameState.final.p2.name;
-    }
-    return gameState.turnOrder[gameState.turnIndex % gameState.turnOrder.length] || "Nadie";
-};
 
 const getStrongestPlayerName = () => {
     if (gameState.players.length === 0) return null;
@@ -440,6 +434,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
 
 
