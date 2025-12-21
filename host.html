@@ -115,9 +115,10 @@
     <div class="main-grid">
         <div class="panel">
             <small style="color:#888">CONTROL PRINCIPAL</small>
-            <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
-            <button id="btnJuguemos" class="btn btn-phrase" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
-
+        
+            <button class="btn" style="background: #ff9800; color: white;" onclick="playAudioFile('platica.mp3', true)">🎤 HOST LISTO (INTRO)</button>
+            <button class="btn" style="background: #0056b3; color: white;" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
+            
             <button class="btn" style="background: #ff9800; color: white;" onclick="stopPlaticaOnly()">🔇 SILENCIAR PLÁTICA</button>
             <button class="btn" style="background: #0056b3; color: white;" onclick="playAudioFile('platica.mp3', true)">🔊 PLAY PLÁTICA</button>
             <button class="btn" style="background: #ff9800; color: white;" onclick="forceTotalSilence()">🔇 SILENCIAR TODO</button>
@@ -645,6 +646,7 @@
     </script>
 </body>
 </html>
+
 
 
 
