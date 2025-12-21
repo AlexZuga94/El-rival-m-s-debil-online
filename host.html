@@ -220,50 +220,35 @@
         }
 
         // playAudioFile: Ahora acepta "mix" para NO pausar el anterior (empalmar)
-        function playAudioFile(fileName, loop = false, mix = false, chainTo = null) {
-            // --- CANDADO DE SEGURIDAD PARA EVITAR DUPLICADOS ---
-            if (fileName === 'platica.mp3') {
-                // Buscamos si ya existe un audio de platica sonando
-                const existingPlatica = Array.from(document.querySelectorAll('audio'))
-                                             .find(a => a.src.includes('platica.mp3'));
-                if (existingPlatica && !existingPlatica.paused) {
-                    console.log("La plática ya está sonando, no la duplicamos.");
-                    return; // SALIMOS DE LA FUNCIÓN, no hacemos nada
-                }
+        function playAudioFile(fileName, loop = false) {
+            // EL ESCUDO: Si el archivo que quieres tocar es el mismo que ya suena, NO HAGAS NADA
+            if (currentMusic && currentFileName === fileName && !currentMusic.paused) {
+                return; 
             }
 
-            // Si NO es mix y NO es la misma plática, paramos la música anterior
-            if (currentMusic && !mix) {
+            // Si es un archivo nuevo, entonces sí paramos el anterior y tocamos el nuevo
+            if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
-                currentMusic.onended = null; 
             }
             
             const path = '/SOUNDS/' + fileName;
-            updateDebug("Play: " + fileName + (mix ? " (Mix)" : ""), "#0ff");
+            updateDebug("Intentando: " + fileName, "#0ff");
             
             const sound = new Audio(path);
             sound.loop = loop;
             sound.volume = 0.5; 
             
-            if (chainTo) {
-                sound.onended = () => { 
-                    playAudioFile(chainTo, true); 
-                };
-            }
-            
             sound.play()
                 .then(() => {
                     updateDebug("Reproduciendo: " + fileName, "#0f0");
-                    currentFileName = fileName; 
+                    currentFileName = fileName; // Guardamos el nombre del archivo actual
                 })
-                .catch(e => {
-                    updateDebug("Error de Audio", "#f00");
-                });
+                .catch(e => updateDebug("ERROR: " + e.message, "#f00"));
                 
-            if (!mix) {
-                currentMusic = sound;
-            }
+            sound.onerror = () => updateDebug("ERROR: No encontrado " + fileName, "#f00");
+            
+            currentMusic = sound;
         }
 
         function forceTotalSilence() {
@@ -343,6 +328,17 @@
         function playFinalSequence() {
             stopMusic(); 
             playAudioFile('anuncio_final.mp3', false, false, 'jugando_final.mp3');
+        }
+
+        function stopMusic() {
+            if (currentMusic) {
+                currentMusic.pause();
+                currentMusic.currentTime = 0;
+                currentMusic.onended = null;
+                currentMusic = null;
+                currentFileName = ""; 
+                updateDebug("Silencio", "#888");
+            }
         }
 
         const els = {
@@ -633,6 +629,7 @@
     </script>
 </body>
 </html>
+
 
 
 
