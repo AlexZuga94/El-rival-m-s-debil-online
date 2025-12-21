@@ -197,6 +197,7 @@
 
         // --- MOTOR DE AUDIO ---
         let currentMusic = null;
+        let currentFileName = ""; // Variable clave para no reiniciar
         const debugEl = document.getElementById('audioDebug');
 
         function updateDebug(msg, color='#fff') {
@@ -205,10 +206,17 @@
         }
 
         function playAudioFile(fileName, loop = false) {
+            // CORRECCIÓN: Si es el mismo archivo que ya suena, NO HACER NADA
+            if (currentMusic && currentFileName === fileName && !currentMusic.paused) {
+                console.log("Audio ya sonando, ignorando reinicio:", fileName);
+                return;
+            }
+
             if (currentMusic) {
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
             }
+            
             // Asegúrate que en GitHub la carpeta sea 'SOUNDS' (mayúsculas)
             const path = '/SOUNDS/' + fileName;
             updateDebug("Intentando: " + fileName, "#0ff");
@@ -218,10 +226,19 @@
             sound.volume = 0.5; 
             
             sound.play()
-                .then(() => updateDebug("Reproduciendo: " + fileName, "#0f0"))
-                .catch(e => updateDebug("ERROR: " + e.message, "#f00"));
+                .then(() => {
+                    updateDebug("Reproduciendo: " + fileName, "#0f0");
+                    currentFileName = fileName; // Guardamos el nombre actual
+                })
+                .catch(e => {
+                    updateDebug("ERROR: " + e.message, "#f00");
+                    currentFileName = "";
+                });
                 
-            sound.onerror = () => updateDebug("ERROR: Archivo no encontrado " + fileName, "#f00");
+            sound.onerror = () => {
+                updateDebug("ERROR: Archivo no encontrado " + fileName, "#f00");
+                currentFileName = "";
+            };
             
             currentMusic = sound;
         }
@@ -231,6 +248,7 @@
                 currentMusic.pause();
                 currentMusic.currentTime = 0;
                 currentMusic = null;
+                currentFileName = ""; // Reseteamos el nombre para que la próxima vez sí suene
                 updateDebug("Silencio", "#888");
             }
         }
@@ -331,7 +349,7 @@
             if (phase === 'times_up') playSfx('wrong');
 
             if (phase === 'questions') {
-                playRoundMusic();
+                playRoundMusic(); // El filtro dentro de playAudioFile evitará que se reinicie
             }
 
             els.winnerBanner.style.display = 'none'; 
