@@ -203,8 +203,12 @@ io.on("connection", (socket) => {
             gameState.players.push(cleanName);
             gameState.turnOrder.push(cleanName);
             playerSockets[socket.id] = cleanName;
+            // Inicializar estadísticas del nuevo jugador
             gameState.stats[cleanName] = { correct: 0, wrong: 0, bankAmount: 0, bankCount: 0 };
+            
+            // AVISAR A TODOS
             io.emit("playersUpdated", gameState.players);
+            updateRanking(); // <--- ¡ESTA ES LA LÍNEA MÁGICA QUE FALTABA!
         }
     });
 
@@ -345,3 +349,4 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
