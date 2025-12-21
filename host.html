@@ -28,7 +28,11 @@
         .btn-next-step { border: 2px solid var(--primary); background: rgba(0, 210, 255, 0.2); box-shadow: 0 0 10px var(--primary); }
         .btn.active { background:var(--primary); color:black; }
         .btn-danger { color:var(--danger); border:1px solid var(--danger); }
-        .btn-intro { background: #e91e63; color: white; margin-bottom: 10px; text-align: center; border: 1px solid #ff6090; }
+        
+        /* Botones de Audio especiales */
+        .btn-intro { background: #e91e63; color: white; margin-bottom: 5px; text-align: center; border: 1px solid #ff6090; }
+        .btn-phrase { background: #673ab7; color: white; margin-bottom: 10px; text-align: center; border: 1px solid #9575cd; }
+        
         .btn-reset { margin-top: auto; background: #300; border: 1px solid #500; color: #f88; text-align: center; flex-shrink: 0; }
 
         .center-panel { display: flex; flex-direction: column; padding: 10px; position: relative; } 
@@ -110,7 +114,10 @@
     <div class="main-grid">
         <div class="panel">
             <small style="color:#888">CONTROL PRINCIPAL</small>
+            
             <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
+            
+            <button id="btnJuguemos" class="btn btn-phrase" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
             
             <small style="color:#888; margin-top:5px;">FASES</small>
             <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
@@ -209,6 +216,7 @@
             debugEl.style.color = color;
         }
 
+        // Música de fondo (Se detiene si llamas a stopMusic)
         function playAudioFile(fileName, loop = false) {
             if (currentMusic && currentFileName === fileName && !currentMusic.paused) {
                 console.log("Audio ya sonando, ignorando reinicio:", fileName);
@@ -270,12 +278,14 @@
             playAudioFile(fileName, false);
         }
         
+        // EFECTOS (Se mezclan encima de la música)
         const sfx = {
             correct: new Audio('/SOUNDS/correct.mp3'),
             wrong: new Audio('/SOUNDS/wrong.mp3'),
             bank: new Audio('/SOUNDS/bank.mp3'),
             eliminated: new Audio('/SOUNDS/eliminated.mp3'),
-            winner: new Audio('/SOUNDS/winner.mp3')
+            winner: new Audio('/SOUNDS/winner.mp3'),
+            juguemos: new Audio('/SOUNDS/juguemos.mp3') // <--- NUEVO
         };
 
         function playSfx(name) {
@@ -344,10 +354,9 @@
             if (phase === 'waiting' || phase === 'voting') {
                 stopMusic(); 
             }
-            // NOTA: Eliminamos 'times_up' de stopMusic para que el audio siga sonando hasta el final
             
             if (phase === 'times_up') {
-                // playSfx('wrong'); // Descomenta si quieres buzzer extra
+                // playSfx('wrong'); // Opcional
             }
 
             if (phase === 'questions') {
@@ -455,15 +464,14 @@
             }
         });
         
-        // MODIFICACIÓN: Mostrar "Comienza..." en fase de espera
         socket.on('turnUpdate', p => {
             if (activePhase === 'waiting') {
                 els.turn.innerText = `COMIENZA: ${p || "Esperando jugadores..."}`;
-                els.turn.style.background = "rgba(255, 64, 129, 0.2)"; // Un tono diferente para destacar
+                els.turn.style.background = "rgba(255, 64, 129, 0.2)"; 
                 els.turn.style.border = "1px solid #ff4081";
             } else {
                 els.turn.innerText = `TURNO DE: ${p || "--"}`;
-                els.turn.style.background = "rgba(0, 210, 255, 0.1)"; // Volver al azul normal
+                els.turn.style.background = "rgba(0, 210, 255, 0.1)"; 
                 els.turn.style.border = "1px solid var(--primary)";
             }
         });
