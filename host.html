@@ -589,7 +589,10 @@
         });
         
         // SONIDO ELIMINADO: Se mezcla encima de 'platica.mp3' (porque no paramos música en waiting)
-        socket.on('playerEliminated', () => playSfx('eliminado'));
+             socket.on('playerEliminated', (name) => {
+            playSfx('eliminado');
+            updateDebug(`SALIÓ: ${name}`, "#ff0055");
+        });
 
         socket.on('finalState', final => {
             els.p1Name.innerText = final.p1.name;
@@ -621,5 +624,6 @@
     </script>
 </body>
 </html>
+
 
 
