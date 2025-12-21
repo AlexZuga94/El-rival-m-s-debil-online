@@ -118,8 +118,10 @@
             <button id="btnIntro" class="btn btn-intro" onclick="playAudioFile('intro.mp3')">🎤 HOST LISTO (INTRO)</button>
             <button id="btnJuguemos" class="btn btn-phrase" onclick="playSfx('juguemos')">📢 Juguemos a el rival más débil</button>
 
-            <button class="btn" style="background: #ff9800; color: white;" onclick="stopPlaticaOnly()">🔇 SILENCIAR SONIDO</button>
+            <button class="btn" style="background: #ff9800; color: white;" onclick="stopPlaticaOnly()">🔇 SILENCIAR PLÁTICA</button>
             <button class="btn" style="background: #0056b3; color: white;" onclick="playAudioFile('platica.mp3', true)">🔊 PLAY PLÁTICA</button>
+            <button class="btn" style="background: #ff9800; color: white;" onclick="forceTotalSilence()">🔇 SILENCIAR TODO</button>
+            
             
             <small style="color:#888; margin-top:5px;">FASES</small>
             <button id="btnPhaseWait" class="btn" onclick="setPhase('waiting')">⏸ ESPERA</button>
@@ -340,6 +342,19 @@
                 currentFileName = ""; 
                 updateDebug("Silencio", "#888");
             }
+        }
+
+        function forceTotalSilence() {
+            // Primero matamos la referencia principal (vulnerabilidad)
+            stopMusic(); 
+            
+            // Segundo, barrido total por si acaso
+            const allAudios = document.getElementsByTagName('audio');
+            for (let i = 0; i < allAudios.length; i++) {
+                allAudios[i].pause();
+                allAudios[i].currentTime = 0;
+            }
+            updateDebug("¡SILENCIO TOTAL ACTIVADO!", "#ff0000");
         }
 
         const els = {
@@ -630,6 +645,7 @@
     </script>
 </body>
 </html>
+
 
 
 
