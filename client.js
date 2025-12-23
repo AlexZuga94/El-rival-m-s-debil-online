@@ -21,24 +21,38 @@ const els = {
     financePanel: document.getElementById('financePanel')
 };
 
+document.addEventListener("DOMContentLoaded", () => {
+    const savedName = localStorage.getItem('rival_playerName');
+    if (savedName) {
+        // Ocultamos el Join y mostramos la pregunta
+        els.join.classList.add('hidden');
+        document.getElementById('reconnectScreen').classList.remove('hidden'); // Asegúrate que la clase 'hidden' esté definida en CSS como display:none
+        document.getElementById('reconnectName').textContent = savedName;
+    }
+});
+
 // --- SONIDOS Y HAPTICS ---
 const vibrate = (pattern) => {
     if (navigator.vibrate) navigator.vibrate(pattern);
 };
 
 // --- JOIN ---
+// --- MODIFICAR window.joinGame PARA GUARDAR EL NOMBRE ---
 window.joinGame = () => {
     const input = document.getElementById('nameInput');
     if (!input.value.trim()) return;
     
     myName = input.value.trim().toUpperCase();
+    
+    // GUARDAR EN MEMORIA LOCAL
+    localStorage.setItem('rival_playerName', myName);
+
     socket.emit('registerPlayer', myName);
     
     els.join.classList.add('hidden');
     els.welcome.classList.remove('hidden');
     document.getElementById('welcomeMsg').textContent = `Bienvenido, ${myName}`;
     
-    // Entrar a pantalla completa (opcional, ayuda en Android)
     if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
 };
 
@@ -66,7 +80,9 @@ socket.on("phaseChanged", (phase) => {
             els.finalBoard.classList.add('hidden');
             els.financePanel.classList.remove('hidden');
             els.bankBtn.classList.remove('hidden');
-        }
+        } else if (state.phase === "waiting") {
+        els.welcome.classList.remove('hidden');
+    }
     } 
     else if (phase === "times_up") {
         els.timesUp.classList.remove('hidden');
@@ -174,6 +190,40 @@ socket.on("finalUpdate", (stats) => {
     }
 });
 
+// --- NUEVAS FUNCIONES DE RECONEXIÓN ---
+
+window.confirmRejoin = () => {
+    const name = localStorage.getItem('rival_playerName');
+    myName = name; // Restaurar variable global
+    socket.emit('requestRejoin', name);
+    document.getElementById('reconnectScreen').classList.add('hidden');
+};
+
+window.cancelRejoin = () => {
+    localStorage.removeItem('rival_playerName');
+    myName = null;
+    document.getElementById('reconnectScreen').classList.add('hidden');
+    els.join.classList.remove('hidden');
+};
+
+// --- SOCKET EVENTS NUEVOS ---
+
+socket.on("rejoinSuccess", (state) => {
+    // Restaurar interfaz según la fase actual del servidor
+    els.welcome.classList.add('hidden');
+    els.join.classList.add('hidden');
+    
+    // Forzar actualización visual basada en la fase actual
+    // Simulamos un cambio de fase para que se acomoden los paneles
+    
+
+socket.on("rejoinFailed", () => {
+    alert("No se pudo recuperar la sesión (el juego terminó o el usuario no existe).");
+    cancelRejoin(); // Borrar memoria y volver al inicio
+});
+
+    
+
 function renderOvals(id, history) {
     const container = document.getElementById(id);
     container.innerHTML = '';
@@ -188,4 +238,5 @@ function renderOvals(id, history) {
         }
         container.appendChild(div);
     }
+
 }
