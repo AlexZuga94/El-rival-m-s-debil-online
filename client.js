@@ -75,6 +75,14 @@ window.doBank = () => {
 
 // --- SOCKET EVENTS ---
 
+socket.on("accessDenied", (msg) => {
+    alert(msg);
+    // Opcional: recargar la página o borrar el nombre guardado si quieres ser estricto
+    localStorage.removeItem('rival_playerName');
+    location.reload(); 
+});
+
+
 socket.on("gameReset", () => location.reload());
 
 socket.on("phaseChanged", (phase) => {
@@ -252,4 +260,5 @@ function renderOvals(id, history) {
     }
 
 }
+
 
