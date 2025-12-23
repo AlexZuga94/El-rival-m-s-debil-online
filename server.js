@@ -213,13 +213,27 @@ io.on("connection", (socket) => {
    socket.on("registerPlayer", (name) => {
         const cleanName = name.trim().toUpperCase();
         
-        // Verificamos si es un jugador NUEVO
-        if (!gameState.players.includes(cleanName)) {
+        // --- VALIDACIÓN DE SEGURIDAD ---
+        const isNewPlayer = !gameState.players.includes(cleanName);
+        // El juego se considera "iniciado" si ya no es la Ronda 1 o si ya no estamos esperando
+        const isGameStarted = (gameState.round > 1 || gameState.phase !== "waiting");
+
+        // SI es un jugador nuevo Y el juego ya empezó -> BLOQUEAR
+        if (isNewPlayer && isGameStarted) {
+            console.log(`Intento de acceso denegado: ${cleanName} (Juego ya iniciado)`);
+            // Enviamos un evento de error (puedes capturarlo en el cliente con un alert)
+            socket.emit("accessDenied", "⛔ El juego ya comenzó. No se admiten nuevos participantes.");
+            return; // ¡Detenemos la ejecución aquí!
+        }
+
+        // --- LÓGICA DE REGISTRO / RECONEXIÓN ---
+        if (isNewPlayer) {
+            // :: REGISTRO DE JUGADOR NUEVO (Solo permitido en Ronda 1 / Waiting) ::
             gameState.players.push(cleanName);
             gameState.players.sort(); 
             gameState.turnOrder = [...gameState.players];
             
-            playerSockets[socket.id] = cleanName; // Asignamos socket
+            playerSockets[socket.id] = cleanName;
             gameState.stats[cleanName] = { correct: 0, wrong: 0, bankAmount: 0, bankCount: 0 };
             
             io.emit("playersUpdated", gameState.players);
@@ -227,19 +241,17 @@ io.on("connection", (socket) => {
             io.emit("turnUpdate", getCurrentPlayer());
             
         } else {
-            // --- LÓGICA DE RECONEXIÓN AUTOMÁTICA ---
-            // Si el nombre YA EXISTE, asumimos que es el mismo dueño volviendo.
+            // :: RECONEXIÓN AUTOMÁTICA (Permitida siempre si el nombre existe) ::
+            // Esto arregla lo que pediste antes: si se apaga el cel, pueden volver.
             console.log(`Jugador recuperado: ${cleanName}`);
             
-            // 1. ACTUALIZAMOS SU SOCKET (Vital para que funcionen sus botones)
-            playerSockets[socket.id] = cleanName;
+            playerSockets[socket.id] = cleanName; // Actualizamos el socket
             
-            // 2. Le avisamos que entró con éxito
             socket.emit("rejoinSuccess", gameState);
             
-            // 3. Le enviamos todo el estado actual para que su pantalla se sincronice
+            // Sincronizamos estado inmediato
             socket.emit("phaseChanged", gameState.phase);
-            socket.emit("playersUpdated", gameState.players); // Para que vea la lista
+            socket.emit("playersUpdated", gameState.players);
             socket.emit("timerUpdate", gameState.timer);
             socket.emit("roundUpdate", gameState.round);
             socket.emit("bankState", { 
@@ -462,6 +474,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
 
 
