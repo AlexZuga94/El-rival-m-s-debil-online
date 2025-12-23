@@ -22,12 +22,24 @@ const els = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Intentar recuperar nombre de la memoria del celular
     const savedName = localStorage.getItem('rival_playerName');
+    
     if (savedName) {
-        // Ocultamos el Join y mostramos la pregunta
+        // Si hay nombre guardado, intentamos entrar directamente como ese jugador
+        // Usamos 'registerPlayer' porque con el cambio de servidor que hicimos arriba,
+        // funcionará como un "Rejoin" automático si el nombre ya existe.
+        console.log("Intentando reconexión automática para:", savedName);
+        
+        // Importante: Asignar a la variable global
+        myName = savedName; 
+        
+        // Emitimos registro directo. El servidor detectará que ya existe y nos devolverá el estado.
+        socket.emit('registerPlayer', savedName);
+        
+        // Opcional: Mostrar pantalla de espera momentánea
         els.join.classList.add('hidden');
-        document.getElementById('reconnectScreen').classList.remove('hidden'); // Asegúrate que la clase 'hidden' esté definida en CSS como display:none
-        document.getElementById('reconnectName').textContent = savedName;
+        els.welcome.classList.remove('hidden'); 
     }
 });
 
@@ -240,3 +252,4 @@ function renderOvals(id, history) {
     }
 
 }
+
