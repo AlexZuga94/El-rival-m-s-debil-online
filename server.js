@@ -201,40 +201,8 @@ io.on("connection", (socket) => {
     socket.on("disconnect", () => {
         const name = playerSockets[socket.id];
         if (name) {
-            console.log(`⚠️ Jugador fuera del juego por desconexión: ${name}`);
-
-            delete playerSockets[socket.id];
-            
-            // Verificamos si era su turno antes de borrarlo
-            const wasHisTurn = (getCurrentPlayer() === name);
-
-            // 1. Lo borramos de todas las listas de juego
-            gameState.players = gameState.players.filter(p => p !== name);
-            gameState.turnOrder = gameState.turnOrder.filter(p => p !== name);
-            
-            // 2. Si era su turno en ronda de preguntas, saltamos al siguiente
-            if (wasHisTurn && gameState.phase === "questions") {
-                if (gameState.turnOrder.length > 0) {
-                    // Re-ajustamos el índice para que no se salte a nadie por el hueco dejado
-                    if (gameState.turnIndex >= gameState.turnOrder.length) {
-                        gameState.turnIndex = 0;
-                    }
-                    getNextRandomQuestion();
-                } else {
-                    // Si ya no queda nadie vivo
-                    clearInterval(timerInterval);
-                    gameState.phase = "waiting";
-                }
-            }
-
-            // 3. Limpiamos sus datos de conexión
-            delete playerSockets[socket.id];
-
-            // 4. Avisamos a todos (Host y Jugadores restantes)
-            io.emit("playerEliminated", name); // Esto activará el sonido en el Host
-            io.emit("playersUpdated", gameState.players);
-            updateRanking();
-            broadcastState();
+            console.log(`⚠️ Desconexión de señal: ${name} (Mantenemos al jugador en juego)`);
+            delete playerSockets[socket.id];  
         }
     });
     socket.emit("phaseChanged", gameState.phase);
@@ -242,28 +210,49 @@ io.on("connection", (socket) => {
     socket.emit("timerUpdate", gameState.timer);
     broadcastState();
 
-    socket.on("registerPlayer", (name) => {
+   socket.on("registerPlayer", (name) => {
         const cleanName = name.trim().toUpperCase();
+        
+        // Verificamos si es un jugador NUEVO
         if (!gameState.players.includes(cleanName)) {
             gameState.players.push(cleanName);
-            
-            // --- NUEVO: ORDENAR ALFABÉTICAMENTE ---
             gameState.players.sort(); 
-            gameState.turnOrder = [...gameState.players]; // Sincronizar el orden de turnos
+            gameState.turnOrder = [...gameState.players];
             
-            playerSockets[socket.id] = cleanName;
+            playerSockets[socket.id] = cleanName; // Asignamos socket
             gameState.stats[cleanName] = { correct: 0, wrong: 0, bankAmount: 0, bankCount: 0 };
             
-            // Avisar a todos y actualizar ranking en el Host
             io.emit("playersUpdated", gameState.players);
             updateRanking();
-            // Actualizar turno para que el Host vea quién empieza (el primero de la lista A-Z)
             io.emit("turnUpdate", getCurrentPlayer());
+            
         } else {
-            // Si el nombre ya existe pero es un registro "nuevo", 
-            // asumimos que es una reconexión implícita o un error.
-            // Le enviamos el estado actual.
+            // --- LÓGICA DE RECONEXIÓN AUTOMÁTICA ---
+            // Si el nombre YA EXISTE, asumimos que es el mismo dueño volviendo.
+            console.log(`Jugador recuperado: ${cleanName}`);
+            
+            // 1. ACTUALIZAMOS SU SOCKET (Vital para que funcionen sus botones)
+            playerSockets[socket.id] = cleanName;
+            
+            // 2. Le avisamos que entró con éxito
             socket.emit("rejoinSuccess", gameState);
+            
+            // 3. Le enviamos todo el estado actual para que su pantalla se sincronice
+            socket.emit("phaseChanged", gameState.phase);
+            socket.emit("playersUpdated", gameState.players); // Para que vea la lista
+            socket.emit("timerUpdate", gameState.timer);
+            socket.emit("roundUpdate", gameState.round);
+            socket.emit("bankState", { 
+                chain: CHAIN_VALUES, 
+                chainIndex: gameState.bank.chainIndex, 
+                currentChainValue: gameState.bank.currentValue, 
+                bankedTotal: gameState.bank.total, 
+                bankedRound: gameState.bank.roundTotal 
+            });
+            
+            if(gameState.currentQuestion) {
+                socket.emit("questionUpdate", gameState.currentQuestion);
+            }
         }
     });
 
@@ -473,6 +462,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
 
 
