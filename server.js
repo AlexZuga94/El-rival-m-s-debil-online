@@ -202,6 +202,8 @@ io.on("connection", (socket) => {
         const name = playerSockets[socket.id];
         if (name) {
             console.log(`⚠️ Jugador fuera del juego por desconexión: ${name}`);
+
+            delete playerSockets[socket.id];
             
             // Verificamos si era su turno antes de borrarlo
             const wasHisTurn = (getCurrentPlayer() === name);
@@ -257,6 +259,43 @@ io.on("connection", (socket) => {
             updateRanking();
             // Actualizar turno para que el Host vea quién empieza (el primero de la lista A-Z)
             io.emit("turnUpdate", getCurrentPlayer());
+        } else {
+            // Si el nombre ya existe pero es un registro "nuevo", 
+            // asumimos que es una reconexión implícita o un error.
+            // Le enviamos el estado actual.
+            socket.emit("rejoinSuccess", gameState);
+        }
+    });
+
+    socket.on("requestRejoin", (name) => {
+        // Verificar si el jugador está en la lista de jugadores activos
+        if (gameState.players.includes(name)) {
+            // ACTUALIZAR EL MAPA DE SOCKETS
+            // Buscamos si había un socket viejo con ese nombre y lo borramos del mapa (opcional limpieza)
+            // Asignamos el nuevo socket ID a este nombre
+            playerSockets[socket.id] = name;
+            
+            console.log(`Jugador reconectado: ${name}`);
+            
+            // Enviarle éxito y estado actual
+            socket.emit("rejoinSuccess", gameState);
+            
+            // Re-enviarle datos críticos para que su UI se sincronice
+            socket.emit("phaseChanged", gameState.phase);
+            socket.emit("roundUpdate", gameState.round);
+            socket.emit("bankState", { 
+                chain: CHAIN_VALUES, 
+                chainIndex: gameState.bank.chainIndex, 
+                currentChainValue: gameState.bank.currentValue, 
+                bankedTotal: gameState.bank.total, 
+                bankedRound: gameState.bank.roundTotal 
+            });
+            
+            if(gameState.currentQuestion) {
+                socket.emit("questionUpdate", gameState.currentQuestion);
+            }
+        } else {
+            socket.emit("rejoinFailed");
         }
     });
 
@@ -434,6 +473,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
 
 
