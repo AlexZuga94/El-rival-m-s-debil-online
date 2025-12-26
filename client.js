@@ -2,6 +2,30 @@ const socket = io();
 let myName = null;
 let isEliminated = false;
 
+// --- WAKE LOCK (MANTENER PANTALLA ENCENDIDA) ---
+let wakeLock = null;
+
+async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock activado: La pantalla no se apagará.');
+        } catch (err) {
+            console.error(`Error al activar Wake Lock: ${err.name}, ${err.message}`);
+        }
+    } else {
+        console.log('El navegador no soporta la función Wake Lock.');
+    }
+}
+
+// Reactivar el bloqueo si el usuario cambia de pestaña y vuelve
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+    }
+});
+
+
 // Elementos DOM cacheados para rendimiento
 const els = {
     join: document.getElementById('joinScreen'),
@@ -260,5 +284,6 @@ function renderOvals(id, history) {
     }
 
 }
+
 
 
