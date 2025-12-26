@@ -64,6 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
         // Opcional: Mostrar pantalla de espera momentánea
         els.join.classList.add('hidden');
         els.welcome.classList.remove('hidden'); 
+
+        requestWakeLock();
     }
 });
 
@@ -83,6 +85,8 @@ window.joinGame = () => {
     // GUARDAR EN MEMORIA LOCAL
     localStorage.setItem('rival_playerName', myName);
 
+    requestWakeLock();
+
     socket.emit('registerPlayer', myName);
     
     els.join.classList.add('hidden');
@@ -91,6 +95,18 @@ window.joinGame = () => {
     
     if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(()=>{});
 };
+
+window.confirmRejoin = () => {
+    const name = localStorage.getItem('rival_playerName');
+    myName = name; 
+    
+    // AGREGAR ESTA LÍNEA AQUÍ:
+    requestWakeLock();
+
+    socket.emit('requestRejoin', name);
+    document.getElementById('reconnectScreen').classList.add('hidden');
+};
+
 
 window.doBank = () => {
     socket.emit('bank');
@@ -284,6 +300,7 @@ function renderOvals(id, history) {
     }
 
 }
+
 
 
 
