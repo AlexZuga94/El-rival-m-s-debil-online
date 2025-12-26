@@ -197,6 +197,40 @@ function startTimer() {
 
 io.on("connection", (socket) => {
 
+        // --- NUEVO: Sincronización de Estado (Anti-Bloqueo) ---
+    socket.on('requestCurrentState', () => {
+        // 1. Enviar fase actual
+        socket.emit('phaseChanged', gameState.phase);
+        
+        // 2. Si estamos en votación, reenviar los candidatos
+        if (gameState.phase === 'voting') {
+            // Asumimos que todos los jugadores activos son candidatos
+            socket.emit('startVoting', gameState.players);
+        }
+        
+        // 3. Si estamos en preguntas, reenviar la pregunta actual
+        if ((gameState.phase === 'questions' || gameState.phase === 'penalty') && gameState.currentQuestion) {
+            socket.emit('questionUpdate', gameState.currentQuestion);
+        }
+
+        // 4. Actualizar banco y ronda
+        socket.emit('roundUpdate', gameState.round);
+        socket.emit('bankState', { 
+            chain: CHAIN_VALUES, 
+            chainIndex: gameState.bank.chainIndex, 
+            currentChainValue: gameState.bank.currentValue, 
+            bankedTotal: gameState.bank.total,
+            bankedRound: gameState.bank.roundTotal 
+        });
+    });
+
+    // --- MODIFICACIÓN EN EL EVENTO DE VOTO ---
+    // Busca donde tengas socket.on('vote', ...) y asegurate de añadir 
+    // esta línea al final de ese evento para avisar al Host:
+    /* io.emit('hostVotingUpdate', gameState.detailedVotes.map(v => v.voter)); 
+    */
+
+
     // --- MANEJO DE DESCONEXIONES (SALIDA PERMANENTE) ---
     socket.on("disconnect", () => {
         const name = playerSockets[socket.id];
@@ -417,6 +451,7 @@ io.on("connection", (socket) => {
                 checkVotingResults();
             }
         }
+        io.emit('hostVotingUpdate', gameState.detailedVotes.map(v => v.voter)); 
     });
 
     socket.on("eliminatePlayer", (name) => {
@@ -474,6 +509,7 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => console.log(`Server on port ${PORT}`));
+
 
 
 
