@@ -280,10 +280,13 @@ socket.on("rejoinSuccess", (state) => {
     // Restaurar interfaz según la fase actual del servidor
     els.welcome.classList.add('hidden');
     els.join.classList.add('hidden');
-    
+
+    if (state.phase === "voting" && !state.votes[myName]) {
+         // Lógica opcional para restaurar votación
+    }
     // Forzar actualización visual basada en la fase actual
     // Simulamos un cambio de fase para que se acomoden los paneles
-    
+});
 
 socket.on("rejoinFailed", () => {
     alert("No se pudo recuperar la sesión (el juego terminó o el usuario no existe).");
@@ -308,6 +311,7 @@ function renderOvals(id, history) {
     }
 
 }
+
 
 
 
