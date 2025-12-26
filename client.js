@@ -261,4 +261,49 @@ function renderOvals(id, history) {
 
 }
 
+// --- SOLUCIÓN 1: Sincronización Automática al Reconectar ---
+socket.on('connect', () => {
+    if (myName) {
+        console.log("Reconectado, solicitando estado del juego...");
+        socket.emit('registerPlayer', myName); // Re-registrar socket
+        socket.emit('requestCurrentState');    // Pedir pantalla actual
+    }
+});
+
+// --- SOLUCIÓN 2: Wake Lock API (Evitar que se apague la pantalla) ---
+let wakeLock = null;
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Pantalla mantenida activa (Wake Lock activo)');
+        }
+    } catch (err) {
+        console.log(`${err.name}, ${err.message}`);
+    }
+}
+
+// Activar Wake Lock con el primer clic del usuario (necesario por seguridad del navegador)
+document.addEventListener('click', () => {
+    if (!wakeLock) requestWakeLock();
+});
+
+// Recuperar el bloqueo si la pestaña vuelve a primer plano
+document.addEventListener('visibilitychange', () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+    }
+});
+
+// Función para el botón manual de refresh
+window.forceSync = () => {
+    // Opción A: Recarga suave (pedir datos)
+    socket.emit('requestCurrentState');
+    
+    // Opción B: Si algo está muy roto, forzar recarga de página (descomentar si es necesario)
+    // location.reload(); 
+    
+    alert("Sincronizando con el servidor...");
+};
+
 
