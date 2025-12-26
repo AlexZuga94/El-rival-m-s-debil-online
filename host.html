@@ -642,9 +642,31 @@
             stopMusic();
             location.reload();
         });
+
+        socket.on('hostVotingUpdate', (votersList) => {
+    // Asumiendo que tienes una lista de jugadores o puedes mostrar una alerta
+    // Esto mostrará en consola o en un elemento temporal quiénes faltan
+    
+    const allPlayers = Array.from(document.querySelectorAll('.player-card-name')).map(el => el.innerText); // Ajusta selector según tu HTML real
+    // O si usas gameState local en host:
+    // const missing = gameState.players.filter(p => !votersList.includes(p));
+    
+    // OPCIÓN VISUAL RÁPIDA: Actualizar una lista en el área de votación
+    const votingArea = document.querySelector('.voting-area');
+    if (votingArea.style.display !== 'none') {
+        let html = "<h3>ESTADO DE VOTACIÓN</h3>";
+        votersList.forEach(voter => {
+            html += `<div style="color:#00ff9d; margin:5px;">✅ ${voter} ya votó</div>`;
+        });
+        // Si tienes la lista completa de jugadores en el cliente host, podrías mostrar quién falta
+        votingArea.innerHTML = html;
+    }
+});
+
     </script>
 </body>
 </html>
+
 
 
 
