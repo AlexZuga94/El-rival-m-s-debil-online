@@ -1,6 +1,7 @@
 const socket = io();
 let myName = null;
 let isEliminated = false;
+let hasVoted = false;
 
 // --- WAKE LOCK (MANTENER PANTALLA ENCENDIDA) ---
 let wakeLock = null;
@@ -134,6 +135,7 @@ socket.on("phaseChanged", (phase) => {
     
     // Lógica por Fase
     if (phase === "questions") {
+        hasVoted = false;
         if (!isEliminated) {
             els.welcome.classList.add('hidden');
             els.game.classList.remove('hidden');
@@ -150,6 +152,11 @@ socket.on("phaseChanged", (phase) => {
     }
     else if (phase === "voting") {
         if (!isEliminated) {
+            els.game.classList.remove('hidden');
+            els.voting.classList.add('show');
+            vibrate(100);
+        }
+        if (!isEliminated && !hasVoted) { 
             els.game.classList.remove('hidden');
             els.voting.classList.add('show');
             vibrate(100);
@@ -219,6 +226,7 @@ socket.on("playersUpdated", (players) => {
             btn.className = 'vote-item';
             btn.textContent = p;
             btn.onclick = () => {
+                hasVoted = true;
                 socket.emit('vote', p);
                 vibrate(50);
                 els.voting.classList.remove('show'); // Ocultar al votar
@@ -300,6 +308,7 @@ function renderOvals(id, history) {
     }
 
 }
+
 
 
 
