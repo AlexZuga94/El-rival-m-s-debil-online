@@ -42,7 +42,7 @@
 
         .login-box { width:80%; text-align:center; }
         input { width:100%; padding:15px; background:#222; border:none; color:white; font-size:1.2rem; text-align:center; border-radius:10px; margin-bottom:15px; }
-        .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; }
+        .btn-start { width:100%; padding:15px; background:var(--primary); border:none; font-weight:bold; font-size:1.2rem; border-radius:10px; color:black; text-transform:uppercase; touch-action: manipulation; }
 
         #introScreen { background: black; text-align:center; padding:20px; }
         .intro-text-1 { font-size:2rem; font-weight:300; animation: fadeIn 1s forwards; opacity:0; }
@@ -52,7 +52,7 @@
         .overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:200; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 20px; }
         
         #votingGrid { display:grid; grid-template-columns:1fr 1fr; gap:15px; width:90%; margin-top:20px; }
-        .vote-btn { padding:20px; background:#222; border:1px solid #444; color:white; font-weight:bold; font-size:1rem; border-radius:10px; }
+        .vote-btn { padding:20px; background:#222; border:1px solid #444; color:white; font-weight:bold; font-size:1rem; border-radius:10px; touch-action: manipulation;}
         .vote-btn:active { background:var(--primary); color:black; }
 
         #timesUpScreen { background: rgba(200, 0, 0, 0.95); }
@@ -193,6 +193,32 @@
         let myEliminationRound = null;
         let isLoggedIn = false;      
         let currentPhase = 'waiting'; 
+
+        // --- CÓDIGO PARA MANTENER PANTALLA ENCENDIDA ---
+let wakeLock = null;
+
+const requestWakeLock = async () => {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log("Wake Lock activo: La pantalla no se apagará.");
+            
+            // Si el bloqueo se libera por alguna razón, lo sabemos aquí
+            wakeLock.addEventListener('release', () => {
+                console.log("Wake Lock liberado.");
+            });
+        }
+    } catch (err) {
+        console.error(`${err.name}, ${err.message}`);
+    }
+};
+
+// Re-activar si el usuario minimiza y vuelve a abrir la pestaña
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+    }
+});
         
         const els = {
             login: document.getElementById('loginScreen'),
@@ -231,6 +257,10 @@
         function enterGame() {
             const name = document.getElementById('pName').value.trim();
             if(!name) return;
+
+            // LLAMADA AL WAKE LOCK AQUÍ
+            requestWakeLock();
+
             myName = name;
             socket.emit('registerPlayer', name);
             els.headerSub.innerHTML = `<span class="highlight-name">${myName}</span>, estás jugando a El Rival más Débil`;
@@ -457,4 +487,3 @@
 </div>
 </body>
 </html>
-
