@@ -93,6 +93,25 @@
 
         #audioDebug { font-size: 0.7rem; color: #555; position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 5px; pointer-events: none; }
         @keyframes fadeIn { from{opacity:0; transform: translateY(20px);} to{opacity:1; transform: translateY(0);} }
+        
+        
+        .script-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(5px);
+        }
+        .script-content {
+            background: #111; border: 2px solid var(--primary);
+            width: 90%; max-width: 600px; border-radius: 15px;
+            padding: 20px; box-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
+        }
+        .script-header { display: flex; justify-content: space-between; color: var(--primary); font-weight: 900; margin-bottom: 15px; }
+        .script-body { font-size: 1.4rem; line-height: 1.6; color: #eee; text-align: center; font-style: italic; }
+        .script-body b { color: var(--accent); font-style: normal; }
+        .close-script { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
+        .hidden { display: none !important; }
+    
     </style>
 </head>
 <body>
@@ -206,6 +225,29 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+
+        const SCRIPTS = {
+           bienvenida: "Bienvenido a <b>El Rival Más Débil</b>. 8 jugadores han venido hoy aquí, pero solo uno se llevará el premio acumulado. Los demás se irán sin nada, tras ser llamados... <b>El Rival Más Débil</b>. ¡Comencemos!",
+           fin_ronda: "¡TIEMPO! Se ha agotado el tiempo de la ronda. En esta ronda han acumulado una cantidad de: <b>$BANK</b>. Pero, ¿quién ya no está a la altura? Es momento de votar.",
+           votacion: "Es momento de votar. ¿Quién es el que frena al equipo? ¿Quién es el que no sabe nada? Tienen 40 segundos. <b>¡VOTEN YA!</b>",
+           eliminacion: "Con la mayoría de votos, tú eres... <b>El Rival Más Débil. ¡ADIÓS!</b>"
+        };
+
+        const scriptModal = document.getElementById('scriptModal');
+        const scriptBody = document.getElementById('scriptBody');
+
+        function showSpeech(key, extraData = {}) {
+            let text = SCRIPTS[key];
+            // Reemplazar variables como el dinero si existen
+            if(extraData.bank) text = text.replace('$BANK', extraData.bank);
+            
+            scriptBody.innerHTML = text;
+            scriptModal.classList.remove('hidden');
+        }
+
+        function closeScript() {
+            scriptModal.classList.add('hidden');
+        }
         const socket = io();
         let activePlayersCount = 0; 
         let activePhase = 'waiting'; 
@@ -642,16 +684,60 @@
             stopMusic();
             location.reload();
         });
+
+        // 1. EVENTO PARA EL BOTÓN DE INICIO ("Host Listo")
+        // Usamos 'addEventListener' para no borrar tu lógica actual de socket
+        if(els.btnWait) {
+            els.btnWait.addEventListener('click', () => {
+                // Solo mostramos la bienvenida si es la primera ronda (opcional)
+                // O siempre que presiones "Esperar/Listo"
+                showSpeech('bienvenida');
+            });
+        }
+
+        // 2. EVENTO PARA CUANDO SE ACABA EL TIEMPO
+        socket.on('timesUp', () => {
+            // Reproducimos el sonido que ya tenías
+            playSfx('timesup'); 
+            
+            // Obtenemos el dinero acumulado REAL del HTML
+            const bankEl = document.getElementById('bankValue');
+            const dinero = bankEl ? bankEl.innerText : '$0';
+            
+            // Mostramos el speech con el monto
+            showSpeech('fin_ronda', { bank: dinero });
+        });
+
+        // 3. EVENTO PARA LA FASE DE VOTACIÓN
+        // Detectamos el cambio de estado global
+        socket.on('stateUpdate', (state) => {
+            // Si entramos a votación, lanzamos el speech
+            if (state.phase === 'voting') {
+                // Pequeño delay de 2s para dar dramatismo
+                setTimeout(() => showSpeech('votacion'), 2000);
+            }
+        });
+
+        // 4. EVENTO PARA ELIMINACIÓN
+        socket.on('playerEliminated', (name) => {
+            // Ya tienes lógica aquí, solo agregamos el speech
+            showSpeech('eliminacion');
+        });
     </script>
+
+    <div id="scriptModal" class="script-overlay hidden">
+    <div class="script-content">
+        <div class="script-header">
+            <span>📜 GUION SUGERIDO</span>
+            <button onclick="closeScript()" class="close-script">✕</button>
+        </div>
+        <div id="scriptBody" class="script-body">
+            </div>
+        <div class="script-footer">
+            <small>Presiona ✕ para cerrar y seguir operando</small>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
