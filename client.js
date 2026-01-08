@@ -311,9 +311,3 @@ function renderOvals(id, history) {
     }
 
 }
-
-
-
-
-
-
