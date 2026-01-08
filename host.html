@@ -93,25 +93,6 @@
 
         #audioDebug { font-size: 0.7rem; color: #555; position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); padding: 5px; border-radius: 5px; pointer-events: none; }
         @keyframes fadeIn { from{opacity:0; transform: translateY(20px);} to{opacity:1; transform: translateY(0);} }
-        
-        
-        .script-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.85); z-index: 9999;
-        display: flex; align-items: center; justify-content: center;
-        backdrop-filter: blur(5px);
-        }
-        .script-content {
-            background: #111; border: 2px solid var(--primary);
-            width: 90%; max-width: 600px; border-radius: 15px;
-            padding: 20px; box-shadow: 0 0 30px rgba(0, 210, 255, 0.3);
-        }
-        .script-header { display: flex; justify-content: space-between; color: var(--primary); font-weight: 900; margin-bottom: 15px; }
-        .script-body { font-size: 1.4rem; line-height: 1.6; color: #eee; text-align: center; font-style: italic; }
-        .script-body b { color: var(--accent); font-style: normal; }
-        .close-script { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
-        .hidden { display: none !important; }
-    
     </style>
 </head>
 <body>
@@ -225,29 +206,6 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-
-        const SCRIPTS = {
-           bienvenida: "Bienvenidos a <b>EL RIVAL MÁS DÉBIL</b> Cualquiera de ustedes podrá llevarse hasta 800 pesos, y a pesar de que son contrincantes, para juntar esta suma deberán trabajar en equipo. Todos excepto uno de ustedes se irán sin nada, pues ronda a ronda votarán para eliminar a <b>EL RIVAL MÁS DÉBIL</b> Conozcamos al equipo. <b>Las reglas del juego:</b> En cada ronda deberán contestar correctamente la mayor cantidad de preguntas dentro del tiempo límite para alcanzar el objetivo de 100 pesos. La manera más rápida de lograrlo es crear una cadena de 8 respuestas correctas. Si fallan una respuesta romperán la cadena. Recuerden, si dicen la palabra banco antes de escuchar su pregunta salvarán el dinero obtenido y comenzarán una nueva cadena. Únicamente el dinero que hayan guardado en el banco pasará a la siguiente ronda. La primera ronda es de tres minutos y comenzaré por estricto orden alfabético, es decir contigo XXX. Juguemos a <b>EL RIVAL MÁS DÉBIL</b>. La primera pregunta vale 1 peso  <b>¡TIEMPO!</b>",
-           fin_ronda: "¡TIEMPO! Se ha agotado el tiempo de la ronda. En esta ronda han acumulado la cantidad de: <b>$BANK</b>. Esta cantidad pasará a la ronda siguiente, pero uno de ustedes no. Es momento de votar por el rival más débil",
-           votacion: "Es momento de votar. ¿Quién es el que frena al equipo? ¿Quién es el que no sabe nada? Tienen 40 segundos. <b>¡VOTEN YA!</b>",
-           eliminacion: "Con la mayoría de votos, tú eres... <b>El Rival Más Débil. ¡ADIÓS!</b>"
-        };
-
-        const scriptModal = document.getElementById('scriptModal');
-        const scriptBody = document.getElementById('scriptBody');
-
-        function showSpeech(key, extraData = {}) {
-            let text = SCRIPTS[key];
-            // Reemplazar variables como el dinero si existen
-            if(extraData.bank) text = text.replace('$BANK', extraData.bank);
-            
-            scriptBody.innerHTML = text;
-            scriptModal.classList.remove('hidden');
-        }
-
-        function closeScript() {
-            scriptModal.classList.add('hidden');
-        }
         const socket = io();
         let activePlayersCount = 0; 
         let activePhase = 'waiting'; 
@@ -684,60 +642,6 @@
             stopMusic();
             location.reload();
         });
-
-        // 1. EVENTO PARA EL BOTÓN DE INICIO ("Host Listo")
-        // Usamos 'addEventListener' para no borrar tu lógica actual de socket
-        if(els.btnWait) {
-            els.btnWait.addEventListener('click', () => {
-                // Solo mostramos la bienvenida si es la primera ronda (opcional)
-                // O siempre que presiones "Esperar/Listo"
-                showSpeech('bienvenida');
-            });
-        }
-
-        // 2. EVENTO PARA CUANDO SE ACABA EL TIEMPO
-        socket.on('timesUp', () => {
-            // Reproducimos el sonido que ya tenías
-            playSfx('timesup'); 
-            
-            // Obtenemos el dinero acumulado REAL del HTML
-            const bankEl = document.getElementById('bankValue');
-            const dinero = bankEl ? bankEl.innerText : '$0';
-            
-            // Mostramos el speech con el monto
-            showSpeech('fin_ronda', { bank: dinero });
-        });
-
-        // 3. EVENTO PARA LA FASE DE VOTACIÓN
-        // Detectamos el cambio de estado global
-        socket.on('stateUpdate', (state) => {
-            // Si entramos a votación, lanzamos el speech
-            if (state.phase === 'voting') {
-                // Pequeño delay de 2s para dar dramatismo
-                setTimeout(() => showSpeech('votacion'), 2000);
-            }
-        });
-
-        // 4. EVENTO PARA ELIMINACIÓN
-        socket.on('playerEliminated', (name) => {
-            // Ya tienes lógica aquí, solo agregamos el speech
-            showSpeech('eliminacion');
-        });
     </script>
-
-    <div id="scriptModal" class="script-overlay hidden">
-    <div class="script-content">
-        <div class="script-header">
-            <span>📜 GUION SUGERIDO</span>
-            <button onclick="closeScript()" class="close-script">✕</button>
-        </div>
-        <div id="scriptBody" class="script-body">
-            </div>
-        <div class="script-footer">
-            <small>Presiona ✕ para cerrar y seguir operando</small>
-        </div>
-    </div>
-</div>
-
 </body>
 </html>
